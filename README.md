@@ -1,8 +1,42 @@
-# Cache Plugin
+# Tyk Gateway Custom Go Plugins
 
 ### Description
 
-This project is a custom repo for Golang plugins for the Tyk Gateway.
+This project is an environment for writing, compiling and bundling Golang plugins for the Tyk Gateway.
+
+### Quickstart
+```shell
+# Make a copy of the example .env file for the Tyk-Dashboard 
+cp tyk/confs/tyk_analytics.env.example tyk/confs/tyk_analytics.env
+```
+Edit the file `tyk/confs/tyk_analytics.env` with your Tyk-Dashboard license key.  
+
+```shell
+# Bring up the Tyk stack.
+make
+```
+Visit [localhost:3000](localhost:3000) to bootstrap the dashboard with your information.  
+Write your code, for example see `go/src/CustomGoPlugin.go`. This example simply injects a header at the "Custom pre-middlewares" stage of the [API request lifecyle](https://tyk.io/docs/concepts/middleware-execution-order/).  
+```shell
+# Compile your plugin
+make build
+```
+This step builds a `.so` file and saves it within the `tyk/middleware/` directory. This `.so` file gets copied into the gateway filesystem under `/opt/tyk-gateway/middleware/`.   
+You can then leverage this plugin in an API definition by ensuring your custom_middleware key has the following value:  
+```json
+    "custom_middleware": {
+      "pre": [
+        {
+          "name": "AddFooBarHeader",
+          "path": "/opt/tyk-gateway/middleware/CustomGoPlugin.so",
+          "require_session": false,
+          "raw_body_only": false
+        }
+      ],
+      "driver": "goplugin"
+    }
+```
+That's it! For detailed instructions please continue reading.  
 
 ### Dependencies
 
@@ -84,7 +118,7 @@ installed. In order to make it work, we provide a special Docker image, which we
 official binaries too. These Docker images can be found at https://hub.docker.com/r/tykio/tyk-plugin-compiler.
 
 Therefore, it is imperative that the version of the `tyk-plugin-compiler` that you use must match the version of 
-Tyk Gateway you are using, e.g., `tykio/tyk-plugin-compiler:v3.1.2` for `tykio/tyk-gateway:v3.1.2`
+Tyk Gateway you are using, e.g., `tykio/tyk-plugin-compiler:v4.0.0` for `tykio/tyk-gateway:v4.0.0`
 
 To build the plugin using the `tyk-plugin-compiler`, run the following command in a terminal:
 ```shell
