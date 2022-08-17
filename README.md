@@ -15,14 +15,14 @@ Edit the file `tyk/confs/tyk_analytics.env` with your Tyk-Dashboard license key.
 # Bring up the Tyk stack.
 make
 ```
-Visit [localhost:3000](localhost:3000) to bootstrap the dashboard with your information.  
+Visit [http://localhost:3000](http://localhost:3000) to bootstrap the dashboard with your information.  
 Write your code, for example see `go/src/CustomGoPlugin.go`. This example simply injects a header at the "Custom pre-middlewares" stage of the [API request lifecyle](https://tyk.io/docs/concepts/middleware-execution-order/).  
 ```shell
 # Compile your plugin
 make build
 ```
 This step builds a `.so` file and saves it within the `tyk/middleware/` directory. This `.so` file gets copied into the gateway filesystem under `/opt/tyk-gateway/middleware/`.   
-You can then leverage this plugin in an API definition by ensuring your custom_middleware key has the following value:  
+You can then leverage this plugin in a Tyk API definition by ensuring your custom_middleware key has the following value:  
 ```json
     "custom_middleware": {
       "pre": [
