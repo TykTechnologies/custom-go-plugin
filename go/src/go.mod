@@ -6,6 +6,7 @@ replace github.com/hashicorp/terraform v1.0.1 => github.com/hashicorp/terraform 
 
 require (
 	github.com/TykTechnologies/tyk v2.9.5+incompatible
+	github.com/hashicorp/terraform v1.0.1 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
