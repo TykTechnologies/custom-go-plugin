@@ -1,0 +1,23 @@
+{
+  "file_list": [
+    "CustomGoPlugin.so"
+  ],
+  "custom_middleware": {
+    "pre": [
+      {
+        "name": "CustomGoPlugin",
+        "path": "CustomGoPlugin.so",
+        "require_session": false,
+        "raw_body_only": false
+      }
+    ],
+    "driver": "goplugin",
+    "id_extractor": {
+      "extract_from": "",
+      "extract_with": "",
+      "extractor_config": {}
+    }
+  },
+  "checksum": "",
+  "signature": ""
+}
