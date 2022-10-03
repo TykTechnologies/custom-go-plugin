@@ -1,4 +1,4 @@
-name: Makefile CI
+name: Build, Bundle, Release Go Plugin
 
 on:
   push:
@@ -20,5 +20,8 @@ jobs:
     - name: Bundle Go Plugin
       run: make go-bundle
       
-    - name: Upload to S3
-      run: make distcheck
+    - name: Upload Bundle
+      uses: actions/upload-artifact@v3
+      with:
+        name: customgoplugin.zip
+        path: tyk/bundle/bundle.zip

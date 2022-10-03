@@ -6,20 +6,20 @@ services:
     volumes:
       - ./go/src:/plugin-source
 
-#   tyk-gateway:
-#     image: sedkis/gatewayamd:${TYK_VERSION:-v4.1.0} 
-#     depends_on:
-#       - tyk-mongo
-#       - tyk-redis
-#     ports:
-#       - "8080:8080"
-#     volumes:
-#       - ./tyk/bundle:/opt/tyk-gateway/bundle
-#       - ./tyk/middleware:/opt/tyk-gateway/middleware
-#     env_file:
-#       - ./tyk/confs/tyk.env
-#     networks:
-#       - tyk
+  tyk-gateway:
+    image: sedkis/gatewayamd:${TYK_VERSION:-v4.1.0} 
+    depends_on:
+      - tyk-mongo
+      - tyk-redis
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./tyk/bundle:/opt/tyk-gateway/bundle
+      - ./tyk/middleware:/opt/tyk-gateway/middleware
+    env_file:
+      - ./tyk/confs/tyk.env
+    networks:
+      - tyk
 
 #   tyk-pump:
 #     image: tykio/tyk-pump-docker-pub:v1.5.1
