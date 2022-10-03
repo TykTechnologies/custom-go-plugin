@@ -120,9 +120,11 @@ official binaries too. These Docker images can be found at https://hub.docker.co
 Therefore, it is imperative that the version of the `tyk-plugin-compiler` that you use must match the version of 
 Tyk Gateway you are using, e.g., `tykio/tyk-plugin-compiler:v4.0.0` for `tykio/tyk-gateway:v4.0.0`
 
+You can set version, by setting TYK_VERSION environment variable, like: `TYK_VERSION=v4.0.0`
+
 To build the plugin using the `tyk-plugin-compiler`, run the following command in a terminal:
 ```shell
-$ make build
+$ TYK_VERSION=v4.2.1 make build
 ```
 
 This command will run the plugin compiler and create a Go plugin called `CustomGoPlugin.so` 
