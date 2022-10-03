@@ -8,9 +8,9 @@ services:
 
   tyk-gateway:
     image: sedkis/gatewayamd:${TYK_VERSION:-v4.1.0} 
-    depends_on:
-      - tyk-mongo
-      - tyk-redis
+    # depends_on:
+    #   - tyk-mongo
+    #   - tyk-redis
     ports:
       - "8080:8080"
     volumes:
