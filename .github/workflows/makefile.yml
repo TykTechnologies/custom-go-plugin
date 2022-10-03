@@ -1,0 +1,24 @@
+name: Makefile CI
+
+on:
+  push:
+    branches: [ "gh-actions-buildplugin" ]
+  pull_request:
+    branches: [ "gh-actions-buildplugin" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      
+    - name: Build Go Plugin
+      run: make go-build
+      
+    - name: Bundle Go Plugin
+      run: make go-bundle
+      
+    - name: Upload to S3
+      run: make distcheck
