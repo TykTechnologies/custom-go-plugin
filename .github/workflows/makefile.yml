@@ -15,10 +15,13 @@ jobs:
     - uses: actions/checkout@v3
       
     - name: Build Go Plugin
-      run: make go-build
+      run: | 
+        make go-build
+        echo "done building, start bundling."
+        docker-compose run --rm --user=1000 --entrypoint "bundle/bundle-entrypoint.sh" tyk-gateway
       
-    - name: Bundle Go Plugin
-      run: make go-bundle
+    # - name: Bundle Go Plugin
+    #   run: make go-bundle
       
     - name: Upload Bundle
       uses: actions/upload-artifact@v3
