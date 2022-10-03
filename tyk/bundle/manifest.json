@@ -5,7 +5,7 @@
   "custom_middleware": {
     "pre": [
       {
-        "name": "CustomGoPlugin",
+        "name": "AddFooBarHeader",
         "path": "CustomGoPlugin.so",
         "require_session": false,
         "raw_body_only": false
