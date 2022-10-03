@@ -30,6 +30,8 @@ jobs:
 
     - run: ls -al tyk/bundle
 
+    - run: ls -al /home/runner/work/custom-go-plugin/custom-go-plugin/tyk/bundle/bundle.zip
+
     - uses: shallwefootball/s3-upload-action@master
       with:
         aws_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
