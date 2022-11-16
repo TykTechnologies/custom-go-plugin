@@ -5,6 +5,15 @@
 This project is an environment for writing, compiling and bundling Golang plugins for the Tyk Gateway.
 
 ### Quickstart
+
+Video Quickstart [here](https://www.youtube.com/watch?v=2AsSWZRZW24).
+
+Or follow below instructions.
+
+
+
+
+
 ```shell
 # Make a copy of the example .env file for the Tyk-Dashboard 
 cp tyk/confs/tyk_analytics.env.example tyk/confs/tyk_analytics.env
