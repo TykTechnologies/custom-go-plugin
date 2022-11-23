@@ -19,19 +19,19 @@ func AddFooBarHeader(rw http.ResponseWriter, r *http.Request) {
 // 2 per 10 given a token of "abc"
 func AuthCheck(rw http.ResponseWriter, r *http.Request) {
 	token := r.Header.Get("Authorization")
-	if token != "abc" && token != "def" {
+	if token != "abcde" && token != "vwxyz" {
 		rw.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	session := &user.SessionState{
 		Alias: token,
-		
-		Rate: 2,
-		Per:  10,
+		Rate:  2,
+		Per:   10,
 		MetaData: map[string]interface{}{
 			token: token,
 		},
+		KeyID: token,
 	}
 	ctx.SetSession(r, session, true)
 }
