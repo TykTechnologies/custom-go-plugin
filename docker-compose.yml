@@ -2,12 +2,12 @@ version: '3.3'
 services:
 
   tyk-plugin-compiler:
-    image: tykio/tyk-plugin-compiler:${TYK_VERSION:-v4.1.0}
+    image: tykio/tyk-plugin-compiler:${TYK_VERSION:-v4.2.3}
     volumes:
       - ./go/src:/plugin-source
 
   tyk-gateway:
-    image: sedkis/gatewayamd:${TYK_VERSION:-v4.1.0} 
+    image: tykio/tyk-gateway:${TYK_VERSION:-v4.2.3} 
     # depends_on:
     #   - tyk-mongo
     #   - tyk-redis

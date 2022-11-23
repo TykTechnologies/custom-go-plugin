@@ -59,7 +59,7 @@ docker-down:
 go-build:
 	/bin/sh -c "cd ./go/src && go mod tidy && go mod vendor"
 	docker-compose run --rm tyk-plugin-compiler CustomGoPlugin.so
-	mv -f ./go/src/CustomGoPlugin_v4.1.0_linux_amd64.so ./tyk/middleware/CustomGoPlugin.so
+	mv -f ./go/src/CustomGoPlugin*.so ./tyk/middleware/CustomGoPlugin.so
 
 # Builds production-ready Go plugin bundle as non-root user, using Tyk Bundler tool
 .PHONY: go-bundle
