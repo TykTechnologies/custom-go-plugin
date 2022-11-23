@@ -19,7 +19,7 @@ func AddFooBarHeader(rw http.ResponseWriter, r *http.Request) {
 // 2 per 10 given a token of "abc"
 func AuthCheck(rw http.ResponseWriter, r *http.Request) {
 	token := r.Header.Get("Authorization")
-	if token != "abcde" && token != "vwxyz" {
+	if token != "d3fd1a57-94ce-4a36-9dfe-679a8f493b49" && token != "3be61aa4-2490-4637-93b9-105001aa88a5" {
 		rw.WriteHeader(http.StatusUnauthorized)
 		return
 	}
