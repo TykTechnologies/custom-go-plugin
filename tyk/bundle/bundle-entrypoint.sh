@@ -4,7 +4,7 @@ set -euo pipefail;
 echo "Building plugin bundle...";
 
 # Copy custom plugin to bundle directory
-cp /opt/tyk-gateway/middleware/CustomGoPlugin.so /opt/tyk-gateway/bundle/CustomGoPlugin.so;
+cp /opt/tyk-gateway/middleware/CustomGoPlugin*.so /opt/tyk-gateway/bundle/;
 
 # Run bundler tool in bundle directory
 cd /opt/tyk-gateway/bundle && /opt/tyk-gateway/tyk bundle build -y;
