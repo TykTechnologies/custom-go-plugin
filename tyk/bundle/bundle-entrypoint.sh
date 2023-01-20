@@ -10,7 +10,7 @@ cp /opt/tyk-gateway/middleware/CustomGoPlugin*.so /opt/tyk-gateway/bundle/;
 cd /opt/tyk-gateway/bundle && /opt/tyk-gateway/tyk bundle build -y;
 
 # Cleanup
-rm /opt/tyk-gateway/bundle/CustomGoPlugin.so;
+rm /opt/tyk-gateway/bundle/CustomGoPlugin*.so;
 
 # Exit
 echo "Done building plugin bundle.";
