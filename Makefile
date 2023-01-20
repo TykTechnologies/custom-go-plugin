@@ -19,13 +19,13 @@ bundle: go-bundle restart-gateway
 logs: docker-logs
 
 # Brings up the project
-up: docker-up docker-status
+up: docker-up bootstrap docker-status
 
 # Brings down the project
 down: docker-down docker-status
 
 # Cleans the project
-clean: go-clean
+clean: docker-clean go-clean
 
 # Gets the status of the docker containers
 status: docker-status
@@ -47,10 +47,20 @@ docker-logs:
 docker-up:
 	docker-compose up -d --remove-orphans tyk-dashboard
 
+# Bootstrap dashboard
+.PHONY: bootstrap
+bootstrap:
+	$(shell ./tyk/scripts/bootstrap.sh)
+
 # Bring docker containers down
 .PHONY: docker-down
 docker-down:
 	docker-compose down --remove-orphans
+
+# Clean docker containers volumes
+.PHONY: docker-clean
+docker-clean:
+	docker-compose down --volumes --remove-orphans
 
 ### Tyk Go Plugin ########################################################################
 
@@ -59,7 +69,7 @@ docker-down:
 go-build:
 	/bin/sh -c "cd ./go/src && go mod tidy && go mod vendor"
 	docker-compose run --rm tyk-plugin-compiler CustomGoPlugin.so
-	mv -f ./go/src/CustomGoPlugin*.so ./tyk/middleware/CustomGoPlugin.so
+	mv -f ./go/src/CustomGoPlugin*.so ./tyk/middleware/
 
 # Builds production-ready Go plugin bundle as non-root user, using Tyk Bundler tool
 .PHONY: go-bundle
@@ -70,11 +80,11 @@ go-bundle: go-build
 .PHONY: go-clean
 go-clean:
 	-rm -rf ./go/src/vendor
-	-rm -f ./tyk/middleware/CustomGoPlugin.so
+	-rm -f ./tyk/middleware/CustomGoPlugin*.so
 	-rm -f ./tyk/bundle/CustomGoPlugin.so
 	-rm -f ./tyk/bundle/bundle.zip
 
 # Restarts the Tyk Gateway to instantly load new iterations of the Go plugin
 .PHONY: restart-gateway
 restart-gateway:
-	-docker-compose restart tyk-gateway
+	docker-compose restart tyk-gateway
