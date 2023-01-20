@@ -15,7 +15,7 @@ jobs:
     - uses: actions/checkout@v3
       
     - name: Copy Env Files
-      run: cp tyk/confs/tyk_analytics.env.example tyk/confs/tyk_analytics.env
+      run: cp .env.example .env
 
     - name: Build Go Plugin
       run: make go-build
