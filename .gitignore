@@ -1,4 +1,6 @@
-.DS_Store
 .idea/*
 tyk/middleware/bundles/*
-tyk/bundle/bundle.zip
+**/.env
+**/*.so
+**/*.zip
+**/.DS_Store
