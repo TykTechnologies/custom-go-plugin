@@ -497,7 +497,7 @@ if [ "302" == "$status" ]; then
         \"internal\": false,
         \"jwt_skip_kid\": false,
         \"enable_batch_request_support\": false,
-        \"enable_detailed_recording\": false,
+        \"enable_detailed_recording\": true,
         \"scopes\": {
           \"jwt\": {},
           \"oidc\": {}
