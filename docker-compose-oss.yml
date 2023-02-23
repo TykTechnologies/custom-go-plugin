@@ -1,0 +1,45 @@
+version: '3.8'
+services:
+
+  tyk-plugin-compiler:
+    image: tykio/tyk-plugin-compiler:${TYK_VERSION:-v4.3.2}
+    volumes:
+      - ./go/src:/plugin-source
+
+  tyk-gateway:
+    image: tykio/tyk-gateway:${TYK_VERSION:-v4.3.2-amd64}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./tyk/bundle:/opt/tyk-gateway/bundle
+      - ./tyk/middleware:/opt/tyk-gateway/middleware
+    env_file:
+      - ./tyk/confs/tyk-oss.env
+    networks:
+      - tyk
+
+  tyk-pump:
+    image: tykio/tyk-pump-docker-pub:v1.7.0
+    depends_on:
+      - tyk-gateway
+      - tyk-redis
+    env_file:
+      - ./tyk/confs/pump-oss.env
+    networks:
+      - tyk
+
+  tyk-redis:
+    image: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - tyk
+
+volumes:
+  mongo-data:
+  redis-data:
+
+networks:
+  tyk:
