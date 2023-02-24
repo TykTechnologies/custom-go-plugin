@@ -8,44 +8,8 @@ This project is an environment for writing, compiling and bundling Golang plugin
 
 Video Quickstart [here](https://www.youtube.com/watch?v=2AsSWZRZW24).
 
-Or follow below instructions.
+Or follow these [instructions](https://tyk.io/docs/nightly/plugins/get-started-selfmanaged/get-started/).
 
-
-
-
-
-```shell
-# Make a copy of the example .env file for the Tyk-Dashboard 
-cp tyk/confs/tyk_analytics.env.example tyk/confs/tyk_analytics.env
-```
-Edit the file `tyk/confs/tyk_analytics.env` with your Tyk-Dashboard license key.  
-
-```shell
-# Bring up the Tyk stack.
-make
-```
-Visit [http://localhost:3000](http://localhost:3000) to bootstrap the dashboard with your information.  
-Write your code, for example see `go/src/CustomGoPlugin.go`. This example simply injects a header at the "Custom pre-middlewares" stage of the [API request lifecyle](https://tyk.io/docs/concepts/middleware-execution-order/).  
-```shell
-# Compile your plugin
-make build
-```
-This step builds a `.so` file and saves it within the `tyk/middleware/` directory. This `.so` file gets copied into the gateway filesystem under `/opt/tyk-gateway/middleware/`.   
-You can then leverage this plugin in a Tyk API definition by ensuring your custom_middleware key has the following value:  
-```json
-    "custom_middleware": {
-      "pre": [
-        {
-          "name": "AddFooBarHeader",
-          "path": "/opt/tyk-gateway/middleware/CustomGoPlugin.so",
-          "require_session": false,
-          "raw_body_only": false
-        }
-      ],
-      "driver": "goplugin"
-    }
-```
-That's it! For detailed instructions please continue reading.  
 
 ### Dependencies
 

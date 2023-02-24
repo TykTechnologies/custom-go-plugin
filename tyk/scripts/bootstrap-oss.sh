@@ -1,44 +1,14 @@
-./tyk/scripts/wait-for-it.sh -t 300 localhost:3000
+./tyk/scripts/wait-for-it.sh -t 300 localhost:8080/hello
 sleep 1;
-status=$(curl -s -o /dev/null -w "%{http_code}" localhost:3000)
+status=$(curl -s -o /dev/null -w "%{http_code}" localhost:8080/hello)
 
-if [ "302" == "$status" ]; then
+if [ "200" == "$status" ]; then
   export $(cat .env | xargs);
 
-  # Bootstrap Tyk dashboard with default organisation.
-  curl -s -X POST localhost:3000/bootstrap \
-    --data "owner_name=$ORG" \
-    --data "owner_slug=$SLUG" \
-    --data "email_address=$EMAIL" \
-    --data "first_name=$FIRST" \
-    --data "last_name=$LAST" \
-    --data "password=$PASSWORD" \
-    --data "confirm_password=$PASSWORD" \
-    --data "terms=on"
-
-  # Get organisation ID.
-  ORG=$(curl -s -X GET localhost:3000/admin/organisations \
-    --header "admin-auth: 12345" | \
-    jq -r '.organisations[0].id')
-
-  # Create a new admin user and get user access token.
-  TOKEN=$(curl -s -X POST localhost:3000/admin/users \
-    --header "admin-auth: 12345" \
-    --data "{
-      \"org_id\": \"$ORG\",
-      \"first_name\": \"Admin\",
-      \"last_name\": \"User\",
-      \"email_address\": \"admin@tyk.io\",
-      \"active\": true,
-      \"user_permissions\": { \"IsAdmin\": \"admin\" }
-    }" | \
-    jq -r '.Message')
-
   # Create httpbin API
-  curl -s -X POST localhost:3000/api/apis \
-    --header "authorization: $TOKEN" \
+  curl -s -X POST localhost:8080/tyk/apis \
+    --header "X-Tyk-Authorization: 352d20ee67be67f6340b4c0605b044b7" \
     --data "{
-      \"api_definition\": {
         \"jwt_issued_at_validation_skew\": 0,
         \"upstream_certificates\": {},
         \"use_keyless\": true,
@@ -504,6 +474,10 @@ if [ "302" == "$status" ]; then
         },
         \"response_processors\": [],
         \"use_mutual_tls_auth\": false
-      }
     }" > /dev/null
+
+   # Create httpbin API
+  curl -s localhost:8080/tyk/reload \
+    --header "X-Tyk-Authorization: 352d20ee67be67f6340b4c0605b044b7"
+
 fi
