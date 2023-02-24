@@ -30,6 +30,8 @@ clean: docker-clean go-clean
 # Gets the status of the docker containers
 status: docker-status
 
+up-oss: docker-up-oss bootstrap-oss docker-status
+
 ### DOCKER ####################################################################
 
 # Gets the status of the running containers
@@ -88,3 +90,12 @@ go-clean:
 .PHONY: restart-gateway
 restart-gateway:
 	docker-compose restart tyk-gateway
+
+.PHONY: docker-up-oss
+docker-up-oss:
+	docker-compose -f docker-compose-oss.yml up -d
+
+# Bootstrap dashboard
+.PHONY: bootstrap-oss
+bootstrap-oss:
+	$(shell ./tyk/scripts/bootstrap-oss.sh)
