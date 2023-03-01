@@ -477,6 +477,6 @@ if [ "200" == "$status" ]; then
 
    # Create httpbin API
   curl -s localhost:8080/tyk/reload \
-    --header "X-Tyk-Authorization: 352d20ee67be67f6340b4c0605b044b7"
+    --header "X-Tyk-Authorization: 352d20ee67be67f6340b4c0605b044b7" > /dev/null
 
 fi
