@@ -6,10 +6,9 @@ This project is an environment for writing, compiling and bundling Golang plugin
 
 ### Quickstart
 
-Video Quickstart [here](https://www.youtube.com/watch?v=2AsSWZRZW24).
+Follow these [instructions](https://tyk.io/docs/nightly/plugins/get-started-selfmanaged/get-started/).
 
-Or follow these [instructions](https://tyk.io/docs/nightly/plugins/get-started-selfmanaged/get-started/).
-
+Alternatively, you can watch our video Quickstart [here](https://www.youtube.com/watch?v=2AsSWZRZW24).
 
 ### Dependencies
 
