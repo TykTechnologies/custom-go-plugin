@@ -1,9 +1,10 @@
+#!/usr/bin/env bash
 ./tyk/scripts/wait-for-it.sh -t 300 localhost:3000
 sleep 1;
 status=$(curl -s -o /dev/null -w "%{http_code}" localhost:3000)
 
 if [ "302" == "$status" ]; then
-  export $(cat .env | xargs);
+  source .env
 
   # Bootstrap Tyk dashboard with default organisation.
   curl -s -X POST localhost:3000/bootstrap \
