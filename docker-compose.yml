@@ -2,12 +2,15 @@ version: '3.8'
 services:
 
   tyk-plugin-compiler:
-    image: tykio/tyk-plugin-compiler:${TYK_VERSION:-v5.0.0}
+    image: tykio/tyk-plugin-compiler:${TYK_VERSION:-v5.1.0-rc6-arm64}
     volumes:
       - ./go/src:/plugin-source
+    environment:
+      - GOOS=linux
+      - GOARCH=arm64
 
   tyk-gateway:
-    image: tykio/tyk-gateway:${TYK_VERSION:-v5.0.0-amd64}
+    image: tykio/tyk-gateway:${TYK_VERSION:-v5.1.0-rc6-arm64}
     ports:
       - "8080:8080"
     volumes:
@@ -30,7 +33,7 @@ services:
       - tyk
 
   tyk-dashboard:
-    image: tykio/tyk-dashboard:${TYK_VERSION:-v5.0.0-amd64}
+    image: tykio/tyk-dashboard:${TYK_VERSION:-v5.0.0}
     depends_on:
       - tyk-gateway
       - tyk-pump
