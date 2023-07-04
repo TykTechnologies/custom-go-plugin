@@ -4,3 +4,7 @@ tyk/middleware/bundles/*
 **/*.so
 **/*.zip
 **/.DS_Store
+dist/
+go/src/go.mod
+go/src/go.sum
+go/src/vendor
