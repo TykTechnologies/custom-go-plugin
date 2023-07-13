@@ -87,8 +87,8 @@ go/src/go.mod:
 .PHONY: go-build
 go-build: go/src/go.mod
 	/bin/sh -c "cd ./go/src && go mod tidy && go mod vendor"
-	docker-compose run --rm tyk-plugin-compiler FrontdoorCachePlugin.so _$$(date +%s)
-	mv -f ./go/src/FrontdoorCachePlugin*.so ./tyk/middleware/
+	docker-compose run --rm tyk-plugin-compiler CustomGoPlugin.so _$$(date +%s)
+	mv -f ./go/src/CustomGoPlugin*.so ./tyk/middleware/
 
 # Runs Go Linter
 lint:
@@ -123,8 +123,8 @@ go-clean:
 	-rm -rf ./go/src/vendor
 	-rm -rf ./go/src/go.mod
 	-rm -rf ./go/src/go.sum
-	-rm -f ./tyk/middleware/FrontdoorCachePlugin*.so
-	-rm -f ./tyk/bundle/FrontdoorCachePlugin.so
+	-rm -f ./tyk/middleware/CustomGoPlugin*.so
+	-rm -f ./tyk/bundle/CustomGoPlugin.so
 	-rm -f ./tyk/bundle/bundle.zip
 
 # Restarts the Tyk Gateway to instantly load new iterations of the Go plugin
