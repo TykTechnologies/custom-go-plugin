@@ -1,6 +1,6 @@
 {
   "file_list": [
-    "CustomGoPlugin_v4.3.2_linux_amd64.so"
+    "CustomGoPlugin.so"
   ],
   "custom_middleware": {
     "pre": [
