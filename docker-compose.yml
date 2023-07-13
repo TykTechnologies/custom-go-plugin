@@ -8,6 +8,7 @@ services:
 
   tyk-gateway:
     image: tykio/tyk-gateway:${TYK_VERSION:-v5.0.0-amd64}
+    platform: linux/amd64
     ports:
       - "8080:8080"
     volumes:
