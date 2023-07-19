@@ -4,6 +4,7 @@
 #
 ###############################################################################
 
+# Set TYK environment variables
 export TYK_VERSION := v5.0.1
 export ARCH := amd64
 export OS := linux
