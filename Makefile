@@ -5,6 +5,8 @@
 ###############################################################################
 
 export TYK_VERSION := v5.0.1
+export ARCH := amd64
+export OS := linux
 
 # Default task: sets up development environment
 install: up build

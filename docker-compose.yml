@@ -3,12 +3,14 @@ services:
 
   tyk-plugin-compiler:
     image: tykio/tyk-plugin-compiler:${TYK_VERSION}
+    environment:
+      - GOARCH=${ARCH}
     volumes:
       - ./go/src:/plugin-source
 
   tyk-gateway:
     image: tykio/tyk-gateway:${TYK_VERSION}
-    platform: linux/amd64
+    platform: ${OS}/${ARCH}
     ports:
       - "8080:8080"
     volumes:
