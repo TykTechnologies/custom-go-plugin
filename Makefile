@@ -29,11 +29,14 @@ log: docker-gateway-log
 # Brings up the project - Pro
 up: docker-up bootstrap docker-status
 
-# Brings up the project with otel
+# Brings up the project - Pro with Otel
 up-otel: docker-up-otel bootstrap docker-status
 
 # Brings up the project - OSS
 up-oss: docker-up-oss bootstrap-oss docker-status
+
+# Brings up the project - OSS with Otel
+up-oss-otel: docker-up-oss-otel bootstrap-oss docker-status
 
 # Brings down the project
 down: docker-down docker-status
@@ -147,6 +150,10 @@ restart-gateway:
 .PHONY: docker-up-oss
 docker-up-oss:
 	docker-compose -f docker-compose-oss.yml up -d
+
+.PHONY: docker-up-oss
+docker-up-oss-otel:
+	docker-compose -f docker-compose-oss.yml -f ./deployments/otel/docker-compose.yml up -d
 
 # Bootstrap dashboard
 .PHONY: bootstrap-oss
