@@ -158,6 +158,7 @@ To build the project and bring up your local instance of Tyk with Jaeger/Otel, r
 ```shell
 $ make otel
 ```
+[Click here](/deployments/otel/examples/CustomGoPlugin.go) to see an example on instrumenting your Custom Go Plugins.
 
 To build the Go plugin and restart the Tyk Gateway if its currently running, run in a terminal:
 ```shell

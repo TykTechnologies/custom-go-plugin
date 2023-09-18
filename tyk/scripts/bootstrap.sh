@@ -499,6 +499,7 @@ if [ "302" == "$status" ]; then
         \"jwt_skip_kid\": false,
         \"enable_batch_request_support\": false,
         \"enable_detailed_recording\": true,
+        \"detailed_tracing\": true,
         \"scopes\": {
           \"jwt\": {},
           \"oidc\": {}
