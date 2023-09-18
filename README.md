@@ -145,6 +145,12 @@ If a plugin is loaded as a bundle and you need to update it you will need to upd
 name in the `"custom_middleware_bundle"` field. Make sure the new `.zip` file is uploaded and available via the bundle
 HTTP endpoint before you update your API spec.
 
+### Open Telemetry and Troubleshooting
+
+To get started, please review our documentation on [Open Telemetry Overview](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/distributed-tracing/open-telemetry/open-telemetry-overview/). **It is very important to note that the support for Open Telemetry with the Tyk Gateway is only avaiable for versions `v5.2.0+`.**
+
+Additional documentation on instrumenting and debugging your custom plugins with Open Telemetry is still under development...
+
 ### Project Lifecycle Makefile Commands
 
 To build the project and bring up your local instance of Tyk, run in a terminal:
