@@ -9,6 +9,9 @@ export TYK_VERSION := v5.2.0
 # Default task: sets up development environment
 install: up build
 
+# Optional task: sets up development environment with otel
+otel: up-otel build
+
 ### PROJECT ###################################################################
 
 # Builds the Go plugin
@@ -23,8 +26,14 @@ logs: docker-logs
 # Outputs the gateway log with formatting to make it easier to read in local dev
 log: docker-gateway-log
 
-# Brings up the project
+# Brings up the project - Pro
 up: docker-up bootstrap docker-status
+
+# Brings up the project with otel
+up-otel: docker-up-otel bootstrap docker-status
+
+# Brings up the project - OSS
+up-oss: docker-up-oss bootstrap-oss docker-status
 
 # Brings down the project
 down: docker-down docker-status
@@ -34,8 +43,6 @@ clean: docker-clean go-clean
 
 # Gets the status of the docker containers
 status: docker-status
-
-up-oss: docker-up-oss bootstrap-oss docker-status
 
 ### DOCKER ####################################################################
 
@@ -58,6 +65,11 @@ docker-gateway-log:
 .PHONY: docker-up
 docker-up:
 	docker-compose up -d --remove-orphans tyk-dashboard
+
+# Bring docker containers up with otel deployment
+.PHONY: docker-up-otel
+docker-up-otel:
+	docker-compose -f docker-compose.yml -f ./deployments/otel/docker-compose.yml up -d 
 
 # Bootstrap dashboard
 .PHONY: bootstrap
