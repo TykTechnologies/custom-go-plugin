@@ -160,7 +160,7 @@ $ make
 
 To build the project and bring up your local instance of Tyk with Jaeger/Otel, run in a terminal:
 > [!IMPORTANT]
-> Tyk Gateway Open Telemetry support is only available on versions `v5.2.0+`. [Click here](/deployments/otel/examples/CustomGoPlugin.go) to see an example on instrumenting your Custom Go Plugins.
+> Tyk Gateway Open Telemetry support is only available on versions `v5.2.0+`. [Click here](deployments/otel/examples/CustomGoPlugin.go) to see an example on instrumenting your Custom Go Plugins.
 ```shell
 $ make otel
 ```
