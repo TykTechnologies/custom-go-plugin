@@ -30,7 +30,7 @@ log: docker-gateway-log
 up: docker-up bootstrap docker-status
 
 # Brings up the project - Pro with Otel
-up-otel: docker-up-otel bootstrap docker-status
+up-otel: docker-up-otel bootstrap-otel docker-status
 
 # Brings up the project - OSS
 up-oss: docker-up-oss bootstrap-oss docker-status
@@ -72,12 +72,17 @@ docker-up:
 # Bring docker containers up with otel deployment
 .PHONY: docker-up-otel
 docker-up-otel:
-	docker-compose -f docker-compose.yml -f ./deployments/otel/docker-compose.yml up -d 
+	docker-compose -f docker-compose.yml -f ./deployments/otel/docker-compose.yml up -d --remove-orphans
 
 # Bootstrap dashboard
 .PHONY: bootstrap
 bootstrap:
 	$(shell ./tyk/scripts/bootstrap.sh)
+
+# Bootstrap dashboard with otel
+.PHONY: bootstrap-otel
+bootstrap-otel:
+	$(shell ./tyk/scripts/bootstrap-otel.sh)
 
 # Bring docker containers down
 .PHONY: docker-down

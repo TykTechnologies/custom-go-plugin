@@ -494,6 +494,7 @@ if [ "302" == "$status" ] || [ "200" == "$status" ]; then
         \"jwt_skip_kid\": false,
         \"enable_batch_request_support\": false,
         \"enable_detailed_recording\": true,
+        \"detailed_tracing\": true,
         \"response_processors\": [],
         \"use_mutual_tls_auth\": false
       }

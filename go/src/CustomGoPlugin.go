@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	// "github.com/TykTechnologies/opentelemetry/trace"
 	"github.com/TykTechnologies/tyk/ctx"
 	"github.com/TykTechnologies/tyk/log"
 	"github.com/TykTechnologies/tyk/user"
@@ -12,6 +13,26 @@ var logger = log.Get()
 
 // AddFooBarHeader adds custom "Foo: Bar" header to the request
 func AddFooBarHeader(rw http.ResponseWriter, r *http.Request) {
+	// ----------- Open Telemtry Example (Tyk v5.2.0+) -----------
+	// We create a new span using the context from the incoming request.
+	// ctx, newSpan := trace.NewSpanFromContext(r.Context(), "", "GoPlugin_first-span")
+
+	// Ensure that the span is properly ended when the function completes.
+	// defer newSpan.End()
+
+	// Set a new name for the span.
+	// newSpan.SetName("AddFooBarHeader Function")
+
+	// Set the status of the span.
+	// newSpan.SetStatus(trace.SPAN_STATUS_OK, "")
+
+	// Set an attribute on the span.
+	// newSpan.SetAttributes(trace.NewAttribute("go_plugin", "1"))
+
+	// Call another function, passing in the context (which includes the new span).
+	// NewFunc(ctx)
+	// ----------- Open Telemtry Example (Tyk v5.2.0+) -----------
+
 	r.Header.Add("Foo", "Bar")
 }
 
