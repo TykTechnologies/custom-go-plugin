@@ -13,16 +13,18 @@ This custom plugin example demonstrates the ability to:
 5. Adding error handling
 
 ## How to test the Custom Plugin
-1. Copy the example source code and place it in the `go/src/CustomGoPlugin.go` file.
+1. Copy the example source code in `CustomGoPlugin.go` file in the current directory and place it in the `go/src/CustomGoPlugin.go` file.
+
 2. Execute the make command to compile the plugin:
 ```
 make build
 ```
+
 3. Setup your API
 
-In this example we will be using `http://httpbin.org/` as the upstream target. It's eseentially a simple HTTP mock request and response service.
+In this example we will be using `http://httpbin.org/` as the upstream target. It's essentially a simple HTTP mock request and response service.
 
-a. Enable detailed tracing for your API
+a. Enable `detailed_tracing` in your API definition
 ```
 {
     ...
@@ -31,7 +33,7 @@ a. Enable detailed tracing for your API
 }
 ```
 
-b. Configure your `custom_middleware` settings
+b. Configure your `custom_middleware` in your API definition
 ```
 "custom_middleware": {
     ...
@@ -67,6 +69,8 @@ b. Configure your `custom_middleware` settings
 ```
 
 5. Open the [Jaeger Dashboard](http://localhost:16686/) in a browser
+
+Set the search `Service` to `tyk-gateway` and select the trace.
 
 First Span - `func AddFooBarHeader()`
 

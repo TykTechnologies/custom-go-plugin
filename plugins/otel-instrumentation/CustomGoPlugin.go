@@ -75,5 +75,6 @@ func NewFuncWithError(ctx context.Context) {
 func main() {}
 
 func init() {
-	logger.Info("--- Go custom plugin v4 init success! ---- ")
+	logger.Info("--- Open Telemetry Instrumentation ---- ")
+	logger.Info("--- Go custom plugin init success! ---- ")
 }
