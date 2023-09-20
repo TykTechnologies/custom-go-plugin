@@ -8,3 +8,4 @@ dist/
 go/src/go.mod
 go/src/go.sum
 go/src/vendor
+go/src/*

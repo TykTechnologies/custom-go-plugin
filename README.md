@@ -149,6 +149,10 @@ HTTP endpoint before you update your API spec.
 
 To get started, please review our documentation on [Open Telemetry Overview](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/distributed-tracing/open-telemetry/open-telemetry-overview/). **It is very important to note that the support for Open Telemetry with the Tyk Gateway is only avaiable for versions `v5.2.0+`.**
 
+#### Examples
+- [Keycloak Auth with Instrumentation](plugins/keycloak-auth/)
+- [Open Telemetry Instrumentation](plugins/otel-instrumentation/)
+
 Additional documentation on instrumenting and debugging your custom plugins with Open Telemetry is still under development...
 
 ### Project Lifecycle Makefile Commands
@@ -160,7 +164,7 @@ $ make
 
 To build the project and bring up your local instance of Tyk with Jaeger/Otel, run in a terminal:
 > [!IMPORTANT]
-> Tyk Gateway Open Telemetry support is only available on versions `v5.2.0+`. [Click here](deployments/otel/examples/CustomGoPlugin.go) to see an example on instrumenting your Custom Go Plugins.
+> Open Telemetry support is only available on Tyk Gateway versions `v5.2.0+`.
 ```shell
 $ make otel
 ```
