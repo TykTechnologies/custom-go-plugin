@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TykTechnologies/opentelemetry/trace"
 	"github.com/TykTechnologies/tyk/config"
 	"github.com/TykTechnologies/tyk/log"
 	"github.com/TykTechnologies/tyk/storage"
@@ -37,25 +38,98 @@ var (
 	store = storage.RedisCluster{KeyPrefix: pluginDefaultKeyPrefix}
 )
 
-func init() {
+type StringOrArrString []string
 
-	introspectionClient = &http.Client{}
-	establishRedisConnection()
+// https://tools.ietf.org/html/rfc7662
+type IntrospectResponse struct {
+	// active REQUIRED.  Boolean indicator of whether or not the presented token
+	//      is currently active.  The specifics of a token's "active" state
+	//      will vary depending on the implementation of the authorization
+	//      server and the information it keeps about its tokens, but a "true"
+	//      value return for the "active" property will generally indicate
+	//      that a given token has been issued by this authorization server,
+	//      has not been revoked by the resource owner, and is within its
+	//      given time window of validity (e.g., after its issuance time and
+	//      before its expiration time).  See Section 4 for information on
+	//      implementation of such checks.
+	Active bool `json:"active"`
+	// scope OPTIONAL.  A JSON string containing a space-separated list of
+	//      scopes associated with this token, in the format described in
+	//      Section 3.3 of OAuth 2.0 [RFC6749].
+	Scope *string `json:"scope,omitempty"`
+	// client_id OPTIONAL.  Client identifier for the OAuth 2.0 client that
+	//      requested this token.
+	ClientID *string `json:"client_id"`
+	// username OPTIONAL.  Human-readable identifier for the resource owner who
+	//      authorized this token.
+	Username *string `json:"username"`
+	// token_type OPTIONAL.  Type of the token as defined in Section 5.1 of OAuth
+	//      2.0 [RFC6749].
+	TokenType *string `json:"token_type"`
+	// exp OPTIONAL.  Integer timestamp, measured in the number of seconds
+	//      since January 1 1970 UTC, indicating when this token will expire,
+	//      as defined in JWT [RFC7519].
+	Exp *int64 `json:"exp"`
+	// iat OPTIONAL.  Integer timestamp, measured in the number of seconds
+	//      since January 1 1970 UTC, indicating when this token was
+	//      originally issued, as defined in JWT [RFC7519].
+	Iat *int64 `json:"iat"`
+	// nbf OPTIONAL.  Integer timestamp, measured in the number of seconds
+	//      since January 1 1970 UTC, indicating when this token is not to be
+	//      used before, as defined in JWT [RFC7519].
+	Nbf *int64 `json:"nbf"`
+	// sub OPTIONAL.  Subject of the token, as defined in JWT [RFC7519].
+	//      Usually a machine-readable identifier of the resource owner who
+	//      authorized this token.
+	Sub *string `json:"sub"`
+	// aud OPTIONAL.  Service-specific string identifier or list of string
+	//      identifiers representing the intended audience for this token, as
+	//      defined in JWT [RFC7519].
+	Aud *StringOrArrString `json:"aud"`
+	// iss OPTIONAL.  String representing the issuer of this token, as
+	//      defined in JWT [RFC7519].
+	Iss *string `json:"iss"`
+	// jti OPTIONAL.  String identifier for the token, as defined in JWT
+	//      [RFC7519].
+	Jti *string `json:"jti"`
+}
+type OIDCToken struct {
+	AccessToken      string `json:"access_token"`
+	ExpiresIn        int    `json:"expires_in"`
+	RefreshExpiresIn int    `json:"refresh_expires_in"`
+	RefreshToken     string `json:"refresh_token"`
+	TokenType        string `json:"token_type"`
+	NotBeforePolicy  int    `json:"not_before_policy"`
+	SessionState     string `json:"session_state"`
+	Scope            string `json:"scope"`
+}
 
-	err := godotenv.Load("/opt/tyk-gateway/middleware/auth.env")
-	if err != nil {
-		introspectLogger.Info("Error loading .env file")
+func (s *StringOrArrString) UnmarshalJSON(data []byte) error {
+	if len(data) > 1 && data[0] == '[' {
+		var obj []string
+		if err := json.Unmarshal(data, &obj); err != nil {
+			return err
+		}
+		*s = StringOrArrString(obj)
+		return nil
 	}
-	introspectionEndpoint = os.Getenv("OAUTH2_KEYCLOAK_INTROSPECT_ENDPOINT")
-	authorizationHeaderValue = os.Getenv("OAUTH2_KEYCLOAK_INTROSPECT_AUTHORIZATION")
-	clientID = os.Getenv("OAUTH2_KEYCLOAK_CLIENT_ID")
-	clientSecret = os.Getenv("OAUTH2_KEYCLOAK_CLIENT_SECRET")
-	tokenEndpoint = os.Getenv("OAUTH2_KEYCLOAK_TOKEN_ENDPOINT")
+
+	var obj string
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return err
+	}
+	*s = StringOrArrString([]string{obj})
+	return nil
 }
 
 // Function for access token introspection - checking if the token is valid and doing the logic for the correct flow
 func OAuth2Introspect(w http.ResponseWriter, r *http.Request) {
 	introspectLogger.Info("Start custom plugin")
+	ctx, newSpan := trace.NewSpanFromContext(r.Context(), "", "GoPlugin_OAuth2Introspect")
+
+	// Ensure that the span is properly ended when the function completes.
+	defer newSpan.End()
+
 	bearerToken := accessTokenFromRequest(r)
 	//Checking if the bearerToken is added or if there is a need to create a new access_token + refresh_token using user and password from Keycloak
 	if bearerToken == "" {
@@ -63,9 +137,16 @@ func OAuth2Introspect(w http.ResponseWriter, r *http.Request) {
 		password := getPassword(r)
 		if user != "" && password != "" {
 			//Creating a brandnew token for the user with username and password from Keycloak
-			brandNewAccessToken(user, password, w, r)
+			brandNewAccessToken(ctx, user, password, w, r)
+
+			// Set span status
+			newSpan.SetStatus(trace.SPAN_STATUS_OK, "")
+
 			return
 		} else {
+			// Set span status
+			newSpan.SetStatus(trace.SPAN_STATUS_ERROR, "")
+
 			introspectLogger.Info("no bearer token found in request")
 			writeUnauthorized(w)
 			return
@@ -196,7 +277,10 @@ func newAccessTokenRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 // Function to get a new access token using a username and password from Keycloak
-func brandNewAccessToken(user string, password string, w http.ResponseWriter, r *http.Request) {
+func brandNewAccessToken(ctx context.Context, user string, password string, w http.ResponseWriter, r *http.Request) {
+	// Create a new span using the context passed from the previous function.
+	ctx, newSpan := trace.NewSpanFromContext(ctx, "", "GoPlugin_brandNewAccessToken")
+	defer newSpan.End()
 
 	response, err := http.PostForm(tokenEndpoint, url.Values{
 		"scope":         {"openid"},
@@ -207,19 +291,33 @@ func brandNewAccessToken(user string, password string, w http.ResponseWriter, r 
 		"client_secret": {clientSecret}})
 
 	if err != nil {
-		//handle postform error
+		// Set an attribute on the new span.
+		newSpan.SetAttributes(trace.NewAttribute("token.endpoint.post.request", err))
+
+		// Set span status
+		newSpan.SetStatus(trace.SPAN_STATUS_ERROR, "")
 	}
 
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
 
 	if err != nil {
-		//handle read response error
+		// Set an attribute on the new span.
+		newSpan.SetAttributes(trace.NewAttribute("response.body.reader", err))
+
+		// Set span status
+		newSpan.SetStatus(trace.SPAN_STATUS_ERROR, "")
 	}
 
 	irObj := &OIDCToken{}
 	err = json.Unmarshal(body, &irObj)
 	if err != nil {
+		// Set an attribute on the new span.
+		newSpan.SetAttributes(trace.NewAttribute("oidc.token.json.unmarshal", err))
+
+		// Set span status
+		newSpan.SetStatus(trace.SPAN_STATUS_ERROR, "")
+
 		introspectLogger.Error("unable to read json response from authorization server %s", err.Error())
 		return
 	}
@@ -309,7 +407,7 @@ func establishRedisConnection() {
 	// Perform Redis connection
 	go rc.ConnectToRedis(context.Background(), nil, &conf)
 	for i := 0; i < 5; i++ { // max 5 attempts - should only take 2
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(30 * time.Millisecond)
 		if rc.Connected() {
 			introspectLogger.Info("Redis Controller connected")
 			break
@@ -324,6 +422,22 @@ func establishRedisConnection() {
 	}
 }
 
-func main() {
+func main() {}
 
+func init() {
+	introspectLogger.Info("--- Keycloak Auth ---- ")
+	introspectLogger.Info("--- Go custom plugin init success! ---- ")
+
+	introspectionClient = &http.Client{}
+	establishRedisConnection()
+
+	err := godotenv.Load("/opt/tyk-gateway/middleware/auth.env")
+	if err != nil {
+		introspectLogger.Info("Error loading .env file")
+	}
+	introspectionEndpoint = os.Getenv("OAUTH2_KEYCLOAK_INTROSPECT_ENDPOINT")
+	authorizationHeaderValue = os.Getenv("OAUTH2_KEYCLOAK_INTROSPECT_AUTHORIZATION")
+	clientID = os.Getenv("OAUTH2_KEYCLOAK_CLIENT_ID")
+	clientSecret = os.Getenv("OAUTH2_KEYCLOAK_CLIENT_SECRET")
+	tokenEndpoint = os.Getenv("OAUTH2_KEYCLOAK_TOKEN_ENDPOINT")
 }
