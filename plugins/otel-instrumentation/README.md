@@ -3,7 +3,7 @@
 > [!WARNING]
 > Please keep in mind that this Custom Go Plugin is not production ready and should only be used to get started.
 
-For more information please visit our official documentation on [How to instrument plugins with OpenTelemetry](https://deploy-preview-3184--tyk-docs.netlify.app/docs/nightly/product-stack/tyk-gateway/advanced-configurations/plugins/otel-plugins/).
+For more information please visit our official documentation on [How to instrument plugins with OpenTelemetry](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/plugins/otel-plugins/).
 
 This custom plugin example demonstrates the ability to:
 1. Creating a new span from the current request context

@@ -149,10 +149,10 @@ HTTP endpoint before you update your API spec.
 
 To get started, please review our documentation on [Open Telemetry Overview](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/distributed-tracing/open-telemetry/open-telemetry-overview/). **It is very important to note that the support for Open Telemetry with the Tyk Gateway is only avaiable for versions `v5.2.0+`.**
 
+You can refer to our official documentation on [How to instrument Custom Go Plugins with OpenTelemetry](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/plugins/otel-plugins/).
+
 #### Examples
 - [Open Telemetry Instrumentation](plugins/otel-instrumentation/)
-
-Additional documentation on instrumenting and debugging your custom plugins with Open Telemetry is still under development...
 
 ### Project Lifecycle Makefile Commands
 

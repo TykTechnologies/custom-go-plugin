@@ -23,4 +23,4 @@ To use Jaeger, open the [Jaeger Dashboard](http://localhost:16686/) in a browser
 - The values for *Operation* change based on the *service*. Leave it on `all` to see everything.
 - *Lookback* filters by time, by limiting displayed data to the selected time period. 
 
-For more information please visit our official documentation on [How to instrument plugins with OpenTelemetry](https://deploy-preview-3184--tyk-docs.netlify.app/docs/nightly/product-stack/tyk-gateway/advanced-configurations/plugins/otel-plugins/).
+For more information please visit our official documentation on [How to instrument plugins with OpenTelemetry](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/plugins/otel-plugins/).
