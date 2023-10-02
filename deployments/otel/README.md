@@ -6,11 +6,13 @@ It has been configured to use in-memory storage, so will not retain data once th
 - [Jaeger Dashboard](http://localhost:16686/)
 
 ## Setup
+> [!IMPORTANT]
+> Open Telemetry support is only available on Tyk Gateway versions `v5.2.0+`.
 
-Run the `make otel` command:
+Run the `make` command:
 
 ```
-make otel
+make
 ```
 
 ## Usage 
