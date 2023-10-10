@@ -65,11 +65,6 @@ docker-up:
 bootstrap:
 	$(shell ./tyk/scripts/bootstrap.sh)
 
-# Bootstrap dashboard with otel
-.PHONY: bootstrap-otel
-bootstrap-otel:
-	$(shell ./tyk/scripts/bootstrap-otel.sh)
-
 # Bring docker containers down
 .PHONY: docker-down
 docker-down:
