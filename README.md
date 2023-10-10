@@ -28,7 +28,7 @@ Alternatively, you can watch our video Quickstart [here](https://www.youtube.com
 - [Tyk Plugin Bundles](https://tyk.io/docs/plugins/how-to-serve-plugins/plugin-bundles/)
 - [Tyk Docker Pro Demo](https://tyk.io/docs/tyk-on-premises/docker/docker-pro-demo/)
 
-### Getting Started
+## Getting Started
 
 To get started, make sure you have Go installed locally on your machine. Visit https://go.dev/doc/install to download
 the latest version of Go and for instructions how to install it for your operating system.
@@ -83,7 +83,7 @@ $ docker-compose --version
 docker-compose version 1.29.2, build 5becea4c
 ```
 
-### Building the Go Plugin
+## Building the Go Plugin
 
 A specific of Tyk Golang plugins is that they need to be built using exactly the same Tyk binary as the one to be 
 installed. In order to make it work, we provide a special Docker image, which we internally use for building our
@@ -108,7 +108,7 @@ The `make build` command will also restart
 Tyk Gateway if the container is running so that any changes made to the plugin will be applied after being built. See below
 for more background on updating Go plugins.
 
-### Deploying the Go Plugin
+## Deploying the Go Plugin
 
 In production environments, it is strongly recommended to deploy your Tyk custom plugin
 as a [plugin bundle](https://tyk.io/docs/plugins/how-to-serve-plugins/plugin-bundles/).
@@ -130,7 +130,7 @@ $ make bundle
 
 This will create a production-ready plugin bundle that can be found at `tyk/bundle/bundle.zip`.
 
-### Updating the Go Plugin
+## Updating the Go Plugin
 
 Loading an updated version of your plugin require one of the following actions:
 
@@ -145,7 +145,17 @@ If a plugin is loaded as a bundle and you need to update it you will need to upd
 name in the `"custom_middleware_bundle"` field. Make sure the new `.zip` file is uploaded and available via the bundle
 HTTP endpoint before you update your API spec.
 
-### Project Lifecycle Makefile Commands
+### Open Telemetry and Troubleshooting
+The **Custom Go Plugin repository** now deploys [Open Telemetry with Jaeger](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/distributed-tracing/open-telemetry/otel_jaeger/) by default to enhance API observability and troubleshooting experience. You can visit the **Jaeger Dashboard** at [http://localhost:16686/](http://localhost:16686/). **It is very important to note that the support for Open Telemetry with the Tyk Gateway is only avaiable for versions `v5.2.0+`.**
+
+To get started, please review our documentation on [Open Telemetry Overview](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/distributed-tracing/open-telemetry/open-telemetry-overview/). 
+
+You can refer to our official documentation on [How to instrument Custom Go Plugins with OpenTelemetry](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/plugins/otel-plugins/).
+
+### Examples
+- [Open Telemetry Instrumentation](plugins/otel-instrumentation/)
+
+## Project Lifecycle Makefile Commands
 
 To build the project and bring up your local instance of Tyk, run in a terminal:
 ```shell

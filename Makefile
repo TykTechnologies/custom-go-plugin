@@ -4,7 +4,7 @@
 #
 ###############################################################################
 
-export TYK_VERSION := v5.0.1
+export TYK_VERSION := v5.2.0
 
 # Default task: sets up development environment
 install: up build
@@ -23,8 +23,11 @@ logs: docker-logs
 # Outputs the gateway log with formatting to make it easier to read in local dev
 log: docker-gateway-log
 
-# Brings up the project
+# Brings up the project - Pro
 up: docker-up bootstrap docker-status
+
+# Brings up the project - OSS
+up-oss: docker-up-oss bootstrap-oss docker-status
 
 # Brings down the project
 down: docker-down docker-status
@@ -34,8 +37,6 @@ clean: docker-clean go-clean
 
 # Gets the status of the docker containers
 status: docker-status
-
-up-oss: docker-up-oss bootstrap-oss docker-status
 
 ### DOCKER ####################################################################
 
@@ -57,7 +58,7 @@ docker-gateway-log:
 # Bring docker containers up
 .PHONY: docker-up
 docker-up:
-	docker-compose up -d --remove-orphans tyk-dashboard
+	docker-compose up -d --remove-orphans tyk-dashboard tyk-gateway
 
 # Bootstrap dashboard
 .PHONY: bootstrap

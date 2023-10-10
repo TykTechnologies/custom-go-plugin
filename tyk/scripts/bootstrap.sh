@@ -3,7 +3,7 @@
 sleep 1;
 status=$(curl -s -o /dev/null -w "%{http_code}" localhost:3000)
 
-if [ "302" == "$status" ]; then
+if [ "302" == "$status" ] || [ "200" == "$status" ]; then
   source .env
 
   # Bootstrap Tyk dashboard with default organisation.
@@ -86,10 +86,6 @@ if [ "302" == "$status" ]; then
         \"jwt_scope_to_policy_mapping\": {},
         \"pinned_public_keys\": {},
         \"expire_analytics_after\": 0,
-        \"external_oauth\": {
-          \"enabled\": false,
-          \"providers\": []
-        },
         \"domain\": \"\",
         \"openid_options\": {
           \"providers\": [],
@@ -182,7 +178,6 @@ if [ "302" == "$status" ]; then
         \"do_not_track\": false,
         \"name\": \"httpbin\",
         \"slug\": \"httpbin\",
-        \"analytics_plugin\": {},
         \"oauth_meta\": {
           \"allowed_access_types\": [],
           \"allowed_authorize_types\": [],
@@ -499,10 +494,6 @@ if [ "302" == "$status" ]; then
         \"jwt_skip_kid\": false,
         \"enable_batch_request_support\": false,
         \"enable_detailed_recording\": true,
-        \"scopes\": {
-          \"jwt\": {},
-          \"oidc\": {}
-        },
         \"response_processors\": [],
         \"use_mutual_tls_auth\": false
       }
