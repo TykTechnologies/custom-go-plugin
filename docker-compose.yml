@@ -3,6 +3,7 @@ services:
 
   tyk-plugin-compiler:
     image: tykio/tyk-plugin-compiler:${TYK_VERSION}
+    platform: linux/amd64
     volumes:
       - ./go/src:/plugin-source
 
