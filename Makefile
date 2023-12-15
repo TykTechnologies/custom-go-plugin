@@ -4,7 +4,7 @@
 #
 ###############################################################################
 
-export TYK_VERSION := v5.2.2
+export TYK_VERSION := v5.2.4
 
 # Default task: sets up development environment
 install: up build
@@ -26,8 +26,14 @@ log: docker-gateway-log
 # Brings up the project - Pro
 up: docker-up bootstrap docker-status
 
+# Brings up the project - Pro w/ oTel
+up-otel: docker-up-otel bootstrap docker-status
+
 # Brings up the project - OSS
 up-oss: docker-up-oss bootstrap-oss docker-status
+
+# Brings up the project - OSS w/ oTel
+up-oss-otel: docker-up-oss-otel bootstrap-oss docker-status
 
 # Brings down the project
 down: docker-down docker-status
@@ -59,6 +65,21 @@ docker-gateway-log:
 .PHONY: docker-up
 docker-up:
 	docker-compose up -d --remove-orphans tyk-dashboard tyk-gateway
+
+# Bring docker containers up /w oTel
+.PHONY: docker-up-otel
+docker-up-otel:
+	docker-compose -f docker-compose.yml -f deployments/otel/docker-compose.yml up -d --remove-orphans tyk-dashboard tyk-gateway
+
+# Bring docker containers up in OSS
+.PHONY: docker-up-oss
+docker-up-oss:
+	docker-compose -f docker-compose-oss.yml up -d --remove-orphans tyk-gateway
+
+# Bring docker containers up in OSS /w oTel
+.PHONY: docker-up-oss-otel
+docker-up-oss-otel:
+	docker-compose -f docker-compose-oss.yml -f deployments/otel/docker-compose.yml up -d --remove-orphans tyk-gateway
 
 # Bootstrap dashboard
 .PHONY: bootstrap
@@ -116,6 +137,8 @@ coverage:
 # Builds production-ready Go plugin bundle as non-root user, using Tyk Bundler tool
 .PHONY: go-bundle
 go-bundle: go-build
+	sed "s/replace_version/$(TYK_VERSION)/g" tyk/bundle/manifest-template.json | \
+	  sed "s/replace_platform/amd64/g" > tyk/bundle/manifest.json
 	docker-compose run --rm --user=1000 --entrypoint "bundle/bundle-entrypoint.sh" tyk-gateway
 
 # Cleans application files
@@ -125,17 +148,14 @@ go-clean:
 	-rm -rf ./go/src/go.mod
 	-rm -rf ./go/src/go.sum
 	-rm -f ./tyk/middleware/CustomGoPlugin*.so
-	-rm -f ./tyk/bundle/CustomGoPlugin.so
+	-rm -f ./tyk/bundle/CustomGoPlugin*.so
+	-rm -f ./tyk/bundle/manifest.so
 	-rm -f ./tyk/bundle/bundle.zip
 
 # Restarts the Tyk Gateway to instantly load new iterations of the Go plugin
 .PHONY: restart-gateway
 restart-gateway:
 	docker-compose restart tyk-gateway
-
-.PHONY: docker-up-oss
-docker-up-oss:
-	docker-compose -f docker-compose-oss.yml up -d
 
 # Bootstrap dashboard
 .PHONY: bootstrap-oss

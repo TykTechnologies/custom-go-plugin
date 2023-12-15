@@ -1,0 +1,36 @@
+version: '3.8'
+services:
+
+  tyk-gateway:
+    depends_on:
+      - otel-jaeger-all-in-one
+      - otel-collector-gateway
+    environment:
+      - TYK_GW_OPENTELEMETRY_ENABLED=true
+      - TYK_GW_OPENTELEMETRY_EXPORTER=grpc
+      - TYK_GW_OPENTELEMETRY_ENDPOINT=otel-collector-gateway:4317
+  
+  otel-jaeger-all-in-one:
+    image: jaegertracing/all-in-one:1.47
+    ports:
+      - "16686:16686"
+      - "14268"
+      - "14250"
+    networks:
+      - tyk
+
+  otel-collector-gateway:
+    image: otel/opentelemetry-collector:0.81.0
+    volumes:
+      - ./deployments/otel/confs/otel-collector.yml:/etc/otel-collector.yml
+    command: [ "--config=/etc/otel-collector.yml" ]
+    ports:
+      - "1888:1888"   # pprof extension
+      - "13133:13133" # health_check extension
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP http receiver
+      - "55670:55679" # zpages extension
+    depends_on:
+      - otel-jaeger-all-in-one
+    networks:
+      - tyk

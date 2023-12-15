@@ -152,6 +152,16 @@ To get started, please review our documentation on [Open Telemetry Overview](htt
 
 You can refer to our official documentation on [How to instrument Custom Go Plugins with OpenTelemetry](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/plugins/otel-plugins/).
 
+To stand up, oTel example: 
+```shell
+$ make up-otel build
+```
+
+To stand up, oTel example in OSS:
+```shell
+$ make up-oss-otel build
+```
+
 ### Examples
 - [Open Telemetry Instrumentation](plugins/otel-instrumentation/)
 

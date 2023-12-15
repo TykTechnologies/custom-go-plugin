@@ -21,7 +21,7 @@ jobs:
       run: make go-build
       
     - name: Bundle Go Plugin
-      run: TYK_VERSION=v5.2.0 docker-compose run --rm --entrypoint "bundle/bundle-entrypoint.sh" tyk-gateway
+      run: TYK_VERSION=v5.2.4 docker-compose run --rm --entrypoint "bundle/bundle-entrypoint.sh" tyk-gateway
       
     - name: Upload Bundle
       uses: actions/upload-artifact@v3

@@ -1,5 +1,6 @@
 .idea/*
 tyk/middleware/bundles/*
+tyk/bundle/manifest.json
 **/.env
 **/*.so
 **/*.zip
