@@ -6,6 +6,10 @@
 
 export TYK_VERSION := v5.2.4
 
+ifeq ($(origin DOCKER_USER), undefined)
+DOCKER_USER := 1000
+endif
+
 # Default task: sets up development environment
 install: up build
 
@@ -139,7 +143,7 @@ coverage:
 go-bundle: go-build
 	sed "s/replace_version/$(TYK_VERSION)/g" tyk/bundle/manifest-template.json | \
 	  sed "s/replace_platform/amd64/g" > tyk/bundle/manifest.json
-	docker-compose run --rm --user=1000 --entrypoint "bundle/bundle-entrypoint.sh" tyk-gateway
+	docker-compose run --rm --user=$(DOCKER_USER) --entrypoint "bundle/bundle-entrypoint.sh" tyk-gateway
 
 # Cleans application files
 .PHONY: go-clean
