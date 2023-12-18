@@ -16,9 +16,6 @@ jobs:
       
     - name: Copy Env Files
       run: cp .env.example .env
-
-    - name: Build Go Plugin
-      run: make go-build
       
     - name: Bundle Go Plugin
       run: make go-bundle
