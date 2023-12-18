@@ -16,12 +16,9 @@ jobs:
       
     - name: Copy Env Files
       run: cp .env.example .env
-
-    - name: Build Go Plugin
-      run: make go-build
       
     - name: Bundle Go Plugin
-      run: TYK_VERSION=v5.2.0 docker-compose run --rm --entrypoint "bundle/bundle-entrypoint.sh" tyk-gateway
+      run: DOCKER_USER=root make go-bundle
       
     - name: Upload Bundle
       uses: actions/upload-artifact@v3
