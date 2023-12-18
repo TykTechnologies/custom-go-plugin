@@ -18,7 +18,7 @@ jobs:
       run: cp .env.example .env
       
     - name: Bundle Go Plugin
-      run: make go-bundle
+      run: sudo make go-bundle
       
     - name: Upload Bundle
       uses: actions/upload-artifact@v3
