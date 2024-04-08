@@ -4,7 +4,7 @@
 #
 ###############################################################################
 
-export TYK_VERSION := v5.2.4
+export TYK_VERSION := v5.3.0
 
 ifeq ($(origin DOCKER_USER), undefined)
 DOCKER_USER := 1000
