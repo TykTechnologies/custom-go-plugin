@@ -17,6 +17,8 @@ services:
       - ./tyk/middleware:/opt/tyk-gateway/middleware
     env_file:
       - ./tyk/confs/tyk.env
+    environment:
+      - SOME_CONFIG_DATA=some-config-data-from-env
     networks:
       - tyk
 

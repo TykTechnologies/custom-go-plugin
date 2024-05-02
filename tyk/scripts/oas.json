@@ -1,0 +1,89 @@
+{
+    "info": {
+      "title": "json",
+      "version": "1.0.0"
+    },
+    "openapi": "3.0.3",
+    "servers": [
+      {
+        "url": "http://localhost:8080/json/"
+      }
+    ],
+    "security": [
+      {
+        "authToken": []
+      }
+    ],
+    "paths": {},
+    "components": {
+      "securitySchemes": {
+        "authToken": {
+          "type": "apiKey",
+          "in": "header",
+          "name": "Authorization"
+        }
+      }
+    },
+    "x-tyk-api-gateway": {
+      "info": {
+        "dbId": "6633c933eba45e00017ca1ef",
+        "id": "0b30d18d1b8548bb458af4d0e1089db9",
+        "name": "json",
+        "state": {
+          "active": true,
+          "internal": false
+        }
+      },
+      "middleware": {
+        "global": {
+          "pluginConfig": {
+            "data": {
+              "enabled": true,
+              "value": {
+                "env-config-example": "env://SOME_CONFIG_DATA"
+              }
+            },
+            "driver": "goplugin"
+          },
+          "postAuthenticationPlugins": [
+            {
+              "enabled": true,
+              "functionName": "InjectConfigData",
+              "path": "/opt/tyk-gateway/middleware/CustomGoPlugin.so"
+            }
+          ],
+          "postPlugins": [
+            {
+              "enabled": true,
+              "functionName": "InjectMetadata",
+              "path": "/opt/tyk-gateway/middleware/CustomGoPlugin.so"
+            }
+          ],
+          "prePlugins": [
+            {
+              "enabled": true,
+              "functionName": "AddFooBarHeader",
+              "path": "/opt/tyk-gateway/middleware/CustomGoPlugin.so"
+            }
+          ]
+        }
+      },
+      "server": {
+        "authentication": {
+          "enabled": true,
+          "securitySchemes": {
+            "authToken": {
+              "enabled": true
+            }
+          }
+        },
+        "listenPath": {
+          "strip": true,
+          "value": "/json/"
+        }
+      },
+      "upstream": {
+        "url": "http://httpbin.org/"
+      }
+    }
+  }
