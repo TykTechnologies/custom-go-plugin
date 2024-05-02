@@ -121,6 +121,7 @@ func MakeOutboundCall(rw http.ResponseWriter, r *http.Request) {
 
 func main() {}
 
+// This will be run during Gateway startup
 func init() {
 	logger.Info("--- Go custom plugin init success! ---- ")
 }
