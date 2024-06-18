@@ -212,13 +212,13 @@ $ make status
 
 To create a custom Docker image with the custom plugin loaded, run:
 ```bash
-$ docker buildx build --platform linux/amd64 -t sedkis/tyk-gateway-jwt-custom-auth:v0.5 --push .
+$ docker buildx build --platform linux/amd64 -t sedkis/tyk-gateway-jwt-custom-auth:v0.5 --load .
 ```
 
-This will create an AMD image and load it into local Docker repo.  
+This will create an AMD image and load it into local Docker repo.
 
-To push it live:
+To build and push to remote:
 
 ```bash
-docker push sedkis/tyk-gateway-jwt-custom-auth:v0.4
+$ docker buildx build --platform linux/amd64 -t sedkis/tyk-gateway-jwt-custom-auth:v0.5 --push .
 ```
