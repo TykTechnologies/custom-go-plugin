@@ -206,3 +206,19 @@ To get the current status of the Docker containers running Tyk, run in a termina
 ```shell
 $ make status
 ```
+
+
+## Dockerfile
+
+To create a custom Docker image with the custom plugin loaded, run:
+```bash
+$ docker buildx build --platform linux/amd64 -t sedkis/tyk-gateway-jwt-custom-auth:v0.5 --push .
+```
+
+This will create an AMD image and load it into local Docker repo.  
+
+To push it live:
+
+```bash
+docker push sedkis/tyk-gateway-jwt-custom-auth:v0.4
+```

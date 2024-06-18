@@ -1,15 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/TykTechnologies/opentelemetry/trace"
 	"github.com/TykTechnologies/tyk/apidef/oas"
 	"github.com/TykTechnologies/tyk/ctx"
-
 	"github.com/TykTechnologies/tyk/log"
 	"github.com/TykTechnologies/tyk/user"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 var logger = log.Get()
@@ -31,7 +33,7 @@ func AddFooBarHeader(rw http.ResponseWriter, r *http.Request) {
 	r.Header.Add("X-SimpleHeader-Inject", "foo")
 }
 
-// Custom Auth, applies a rate limit of
+// AuthCheck Custom Auth, applies a rate limit of
 // 2 per 10 given a token of "abc"
 func AuthCheck(rw http.ResponseWriter, r *http.Request) {
 	token := r.Header.Get("Authorization")
@@ -63,7 +65,7 @@ func AuthCheck(rw http.ResponseWriter, r *http.Request) {
 	ctx.SetSession(r, session, true)
 }
 
-// Injects meta data from a token where the metadata key is "foo"
+// InjectMetadata Injects meta data from a token where the metadata key is "foo"
 func InjectMetadata(rw http.ResponseWriter, r *http.Request) {
 	session := ctx.GetSession(r)
 	if session != nil {
@@ -80,22 +82,22 @@ func InjectMetadata(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Injects config data, both from an env variable and hard-coded
+// InjectConfigData Injects config data, both from an env variable and hard-coded
 func InjectConfigData(rw http.ResponseWriter, r *http.Request) {
 	oasDef := ctx.GetOASDefinition(r)
 
-	 // Extract the middleware section safely
-	 xTyk, ok := oasDef.Extensions["x-tyk-api-gateway"].(*oas.XTykAPIGateway)
-	 if !ok {
-		 logger.Println("Middleware extension is missing or invalid.")
-		 return
-	 }
+	// Extract the middleware section safely
+	xTyk, ok := oasDef.Extensions["x-tyk-api-gateway"].(*oas.XTykAPIGateway)
+	if !ok {
+		logger.Println("Middleware extension is missing or invalid.")
+		return
+	}
 
-	 configKey := xTyk.Middleware.Global.PluginConfig.Data.Value["env-config-example"].(string)
-	 r.Header.Add("X-ConfigData-Config", configKey)
+	configKey := xTyk.Middleware.Global.PluginConfig.Data.Value["env-config-example"].(string)
+	r.Header.Add("X-ConfigData-Config", configKey)
 }
 
-// Injects config data, both from an env variable and hard-coded
+// MakeOutboundCall Injects config data, both from an env variable and hard-coded
 func MakeOutboundCall(rw http.ResponseWriter, r *http.Request) {
 	// Define the URL
 	url := "https://httpbin.org/get"
@@ -124,4 +126,102 @@ func main() {}
 // This will be run during Gateway startup
 func init() {
 	logger.Info("--- Go custom plugin init success! ---- ")
+}
+
+// IPRateLimit
+func IPRateLimit(rw http.ResponseWriter, r *http.Request) {
+	// Get the client IP address
+	clientIP := getIP(r.RemoteAddr)
+
+	logger.Info("Request came in from " + clientIP)
+
+	// Create a Redis key for the IP address
+	session := &user.SessionState{
+		Alias: clientIP,
+		Rate:  2,
+		Per:   10,
+		MetaData: map[string]interface{}{
+			"token": clientIP,
+		},
+		KeyID: clientIP,
+	}
+
+	ctx.SetSession(r, session, true)
+}
+
+func getIP(remoteAddr string) string {
+	if ip := strings.Split(remoteAddr, ":"); len(ip) > 0 {
+		return ip[0]
+	}
+	return ""
+}
+
+// JWTValidate Validate a JWT signed using PS256/382/512
+func JWTValidate(rw http.ResponseWriter, r *http.Request) {
+	logger.Info("Request came in - custom auth")
+
+	tokenString := r.Header.Get("Authorization")
+
+	oasDef := ctx.GetOASDefinition(r)
+
+	// Extract the middleware section safely
+	xTyk, ok := oasDef.Extensions["x-tyk-api-gateway"].(*oas.XTykAPIGateway)
+	if !ok {
+		logger.Println("Middleware extension is missing or invalid.")
+		return
+	}
+
+	publicKeyPEM := xTyk.Middleware.Global.PluginConfig.Data.Value["env-config-example"].(string)
+
+	key, err := jwt.ParseRSAPublicKeyFromPEM([]byte(publicKeyPEM))
+	if err != nil {
+		logger.Info("Error parsing public key: %v", err)
+		rw.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodRSAPSS); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return key, nil
+	})
+
+	if err != nil {
+		logger.Info("Error parsing token: %v", err)
+		rw.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	if !token.Valid {
+		logger.Info("Invalid token")
+		rw.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	logger.Info("Token is valid")
+
+	// Create a Redis key for the IP address
+	session := &user.SessionState{
+		Alias: token.Raw,
+		Rate:  0,
+		Per:   0,
+		MetaData: map[string]interface{}{
+			"token": token.Raw,
+		},
+		KeyID: token.Raw,
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		logger.Info("Error casting claims")
+	}
+
+	// Example: Get "username" from the claims
+	sub := claims["sub"].(string)
+	logger.Info("sub: %s\n", sub)
+
+	r.Header.Add("X-Injected-Sub", sub)
+
+	ctx.SetSession(r, session, true)
 }
