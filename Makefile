@@ -53,37 +53,37 @@ status: docker-status
 # Gets the status of the running containers
 .PHONY: docker-status
 docker-status:
-	docker-compose ps
+	docker compose ps
 
 # Gets the container logs
 .PHONY: docker-logs
 docker-logs:
-	docker-compose logs -t --tail="all"
+	docker compose logs -t --tail="all"
 
 # Gets the container log for gateway and applies formatting for easier reading in local dev
 .PHONY: docker-gateway-log
 docker-gateway-log:
-	docker-compose logs tyk-gateway -t -f | perl -ne 'if (/time="([^"]+)" level=(\w+) msg="((?:\\"|[^"])*)"(\s*prefix=([^\s]+))?/) { print "$$1 ".sprintf("%-20s", "[$$2]".($$5 ? "[".substr($$5,0,10)."] " : (" " x 12)))."$$3\n" }'
+	docker compose logs tyk-gateway -t -f | perl -ne 'if (/time="([^"]+)" level=(\w+) msg="((?:\\"|[^"])*)"(\s*prefix=([^\s]+))?/) { print "$$1 ".sprintf("%-20s", "[$$2]".($$5 ? "[".substr($$5,0,10)."] " : (" " x 12)))."$$3\n" }'
 
 # Bring docker containers up
 .PHONY: docker-up
 docker-up:
-	docker-compose up -d --remove-orphans tyk-dashboard tyk-gateway
+	docker compose up -d --remove-orphans tyk-dashboard tyk-gateway
 
 # Bring docker containers up /w oTel
 .PHONY: docker-up-otel
 docker-up-otel:
-	docker-compose -f docker-compose.yml -f deployments/otel/docker-compose.yml up -d --remove-orphans tyk-dashboard tyk-gateway
+	docker compose -f docker compose.yml -f deployments/otel/docker compose.yml up -d --remove-orphans tyk-dashboard tyk-gateway
 
 # Bring docker containers up in OSS
 .PHONY: docker-up-oss
 docker-up-oss:
-	docker-compose -f docker-compose-oss.yml up -d --remove-orphans tyk-gateway
+	docker compose -f docker compose-oss.yml up -d --remove-orphans tyk-gateway
 
 # Bring docker containers up in OSS /w oTel
 .PHONY: docker-up-oss-otel
 docker-up-oss-otel:
-	docker-compose -f docker-compose-oss.yml -f deployments/otel/docker-compose.yml up -d --remove-orphans tyk-gateway
+	docker compose -f docker compose-oss.yml -f deployments/otel/docker compose.yml up -d --remove-orphans tyk-gateway
 
 # Bootstrap dashboard
 .PHONY: bootstrap
@@ -93,12 +93,12 @@ bootstrap:
 # Bring docker containers down
 .PHONY: docker-down
 docker-down:
-	docker-compose down --remove-orphans
+	docker compose down --remove-orphans
 
 # Clean docker containers volumes
 .PHONY: docker-clean
 docker-clean:
-	docker-compose down --volumes --remove-orphans
+	docker compose down --volumes --remove-orphans
 
 ### Tyk Go Plugin ########################################################################
 
@@ -113,7 +113,7 @@ go/src/go.mod:
 .PHONY: go-build
 go-build: go/src/go.mod
 	/bin/sh -c "cd ./go/src && go mod tidy && go mod vendor"
-	docker-compose run --rm tyk-plugin-compiler CustomGoPlugin.so _$$(date +%s)
+	docker compose run --rm tyk-plugin-compiler CustomGoPlugin.so _$$(date +%s)
 	mv -f ./go/src/CustomGoPlugin*.so ./tyk/middleware/
 
 # Runs Go Linter
@@ -142,8 +142,10 @@ coverage:
 .PHONY: go-bundle
 go-bundle: go-build
 	sed "s/replace_version/$(TYK_VERSION)/g" tyk/bundle/manifest-template.json | \
-	  sed "s/replace_platform/amd64/g" > tyk/bundle/manifest.json
-	docker-compose run --rm --user=$(DOCKER_USER) --entrypoint "bundle/bundle-entrypoint.sh" tyk-gateway
+	sed "s/replace_platform/amd64/g" > tyk/bundle/manifest.json
+	cp tyk/middleware/CustomGoPlugin*.so tyk/bundle/
+	docker compose run --rm --user=$(DOCKER_USER) -w /opt/tyk-gateway/bundle tyk-gateway bundle build -y
+	rm tyk/bundle/CustomGoPlugin*.so
 
 # Cleans application files
 .PHONY: go-clean
@@ -159,7 +161,7 @@ go-clean:
 # Restarts the Tyk Gateway to instantly load new iterations of the Go plugin
 .PHONY: restart-gateway
 restart-gateway:
-	docker-compose restart tyk-gateway
+	docker compose restart tyk-gateway
 
 # Bootstrap dashboard
 .PHONY: bootstrap-oss

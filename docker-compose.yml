@@ -1,6 +1,4 @@
-version: '3.8'
 services:
-
   tyk-plugin-compiler:
     image: tykio/tyk-plugin-compiler:${TYK_VERSION}
     platform: linux/amd64
