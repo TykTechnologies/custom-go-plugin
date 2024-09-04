@@ -144,7 +144,7 @@ go-bundle: go-build
 	sed "s/replace_version/$(TYK_VERSION)/g" tyk/bundle/manifest-template.json | \
 	sed "s/replace_platform/amd64/g" > tyk/bundle/manifest.json
 	cp tyk/middleware/CustomGoPlugin*.so tyk/bundle/
-	docker-compose run --rm --user=$(DOCKER_USER) --entrypoint "tyk" tyk-gateway bundle build -y
+	docker compose run --rm --user=$(DOCKER_USER) --entrypoint "tyk" tyk-gateway bundle build -y
 	rm tyk/bundle/CustomGoPlugin*.so
 
 # Cleans application files
