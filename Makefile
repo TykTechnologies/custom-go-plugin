@@ -141,8 +141,6 @@ coverage:
 # Builds production-ready Go plugin bundle as non-root user, using Tyk Bundler tool
 .PHONY: go-bundle
 go-bundle: go-build
-.PHONY: go-bundle
-go-bundle: go-build
     sed "s/replace_version/$(TYK_VERSION)/g" tyk/bundle/manifest-template.json | \
     sed "s/replace_platform/amd64/g" > tyk/bundle/manifest.json
     cp tyk/middleware/CustomGoPlugin*.so tyk/bundle/
