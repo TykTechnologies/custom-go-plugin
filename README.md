@@ -78,9 +78,9 @@ to be installed on your machine.
 Verify Docker and Docker Compose are installed by running in a terminal:
 ```shell
 $ docker --version
-Docker version 20.10.11, build dea9396
-$ docker-compose --version
-docker-compose version 1.29.2, build 5becea4c
+Docker version 24.0.5, build ced0996
+$ docker compose version
+Docker Compose version v2.23.0
 ```
 
 ## Building the Go Plugin
