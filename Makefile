@@ -121,6 +121,20 @@ go-build: go/src/go.mod
 	docker compose run --rm tyk-plugin-compiler CustomGoPlugin.so _$$(date +%s)
 	mv -f ./go/src/CustomGoPlugin*.so ./tyk/middleware/
 
+go/src/go.mod:
+	cd ./go/src ; \
+	$(go-init) ; \
+	go get -d github.com/TykTechnologies/tyk@`git ls-remote https://github.com/TykTechnologies/tyk.git refs/tags/${TYK_VERSION} | awk '{print $$1;}'` ; \
+	$(go-tidy) ; \
+	$(go-vendor)
+
+# Builds Go plugin and moves it into local Tyk instance
+.PHONY: go-build
+go-build: go/src/go.mod
+	/bin/sh -c "cd ./go/src && $(go-tidy) && $(go-vendor)"
+	docker compose run --rm tyk-plugin-compiler CustomGoPlugin.so _$$(date +%s)
+	mv -f ./go/src/CustomGoPlugin*.so ./tyk/middleware/
+
 # Runs Go Linter
 lint:
 	/bin/sh -c "docker run --rm -v ${PWD}/go/src:/app -v ~/.cache/golangci-lint/v1.53.2:/root/.cache -w /app golangci/golangci-lint:v1.53.2 golangci-lint run"
