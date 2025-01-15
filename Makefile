@@ -101,11 +101,11 @@ docker-clean:
 	docker compose down --volumes --remove-orphans
 
 ### Tyk Go Plugin ########################################################################
-go-init:=docker container run --user=$(DOCKER_USER) -v ${PWD}/go/src:/plugin-source -t --env GO111MODULE=on --workdir /plugin-source --entrypoint go --rm tykio/tyk-plugin-compiler:${TYK_VERSION} mod init tyk-plugin
+go-init:=docker container run -v ${PWD}/go/src:/plugin-source -t --env GO111MODULE=on --workdir /plugin-source --entrypoint go --rm tykio/tyk-plugin-compiler:${TYK_VERSION} mod init tyk-plugin
 
-go-tidy:=docker container run --user=$(DOCKER_USER) -v ${PWD}/go/src:/plugin-source -t --env GO111MODULE=on --workdir /plugin-source --entrypoint go --rm tykio/tyk-plugin-compiler:${TYK_VERSION} mod tidy
+go-tidy:=docker container run -v ${PWD}/go/src:/plugin-source -t --env GO111MODULE=on --workdir /plugin-source --entrypoint go --rm tykio/tyk-plugin-compiler:${TYK_VERSION} mod tidy
 
-go-vendor:=docker container run --user=$(DOCKER_USER) -v ${PWD}/go/src:/plugin-source -t --env GO111MODULE=on --workdir /plugin-source --entrypoint go --rm tykio/tyk-plugin-compiler:${TYK_VERSION} mod vendor
+go-vendor:=docker container run -v ${PWD}/go/src:/plugin-source -t --env GO111MODULE=on --workdir /plugin-source --entrypoint go --rm tykio/tyk-plugin-compiler:${TYK_VERSION} mod vendor
 
 go/src/go.mod:
 	cd ./go/src ; \
