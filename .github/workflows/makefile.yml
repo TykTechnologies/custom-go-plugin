@@ -14,16 +14,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Go v1.21.8
-      with:
-        go-version: '1.21.8'
-      uses: actions/setup-go@v5
-
     - name: Copy Env Files
       run: cp .env.example .env
       
     - name: Bundle Go Plugin
-      run: DOCKER_USER=root make bundle
+      run: sudo DOCKER_USER=root make bundle
       
     - name: Upload Bundle
       uses: actions/upload-artifact@v3
@@ -40,4 +35,3 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: 'us-east-1'   
         SOURCE_DIR: 'tyk/bundle'
-    
