@@ -119,7 +119,7 @@ go/src/go.mod:
 # Builds Go plugin and moves it into local Tyk instance
 .PHONY: go-build
 go-build: go/src/go.mod
-	/bin/sh -c "cd ./go/src && $(go-tidy) && $(go-vendor)"
+	/bin/sh -c "cd ./go/src && ls -l && $(go-tidy) && $(go-vendor)"
 	docker compose run --env GO_TIDY=1 --env GO_GET=1 --rm tyk-plugin-compiler CustomGoPlugin.so _$$(date +%s)
 	mv -f ./go/src/CustomGoPlugin*.so ./tyk/middleware/
 
