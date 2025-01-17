@@ -16,9 +16,6 @@ jobs:
 
     - name: Copy Env Files
       run: cp .env.example .env
-    
-    - name: Clean Go Plugin
-      run: DOCKER_USER=root make go-clean
 
     - name: Bundle Go Plugin
       run: DOCKER_USER=root make go-bundle

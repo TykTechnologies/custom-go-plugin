@@ -103,6 +103,8 @@ docker-clean:
 # Use go version and dependencies from Tyk Plugin Compiler instead of local to prevent version mismatch
 go-init:=docker container run -v ${PWD}/go/src:/plugin-source -t --env GO111MODULE=on --workdir /plugin-source --entrypoint go --rm tykio/tyk-plugin-compiler:${TYK_VERSION} mod init tyk-plugin
 
+go-get:=go get -d github.com/TykTechnologies/tyk@`git ls-remote https://github.com/TykTechnologies/tyk.git refs/tags/${TYK_VERSION} | awk '{print $$1;}'`
+
 go-tidy:=docker container run -v ${PWD}/go/src:/plugin-source -t --env GO111MODULE=on --workdir /plugin-source --entrypoint go --rm tykio/tyk-plugin-compiler:${TYK_VERSION} mod tidy
 
 go-vendor:=docker container run -v ${PWD}/go/src:/plugin-source -t --env GO111MODULE=on --workdir /plugin-source --entrypoint go --rm tykio/tyk-plugin-compiler:${TYK_VERSION} mod vendor
@@ -110,14 +112,14 @@ go-vendor:=docker container run -v ${PWD}/go/src:/plugin-source -t --env GO111MO
 go/src/go.mod:
 	cd ./go/src ; \
 	$(go-init) ; \
-	go get -d github.com/TykTechnologies/tyk@`git ls-remote https://github.com/TykTechnologies/tyk.git refs/tags/${TYK_VERSION} | awk '{print $$1;}'` ; \
+	$(go-get); \
 	$(go-tidy) ; \
 	$(go-vendor)
 
 # Builds Go plugin and moves it into local Tyk instance
 .PHONY: go-build
 go-build: go/src/go.mod
-	/bin/sh -c "cd ./go/src && $(go-tidy) && $(go-vendor)"
+	/bin/sh -c "cd ./go/src && $(go-get) && $(go-tidy) && $(go-vendor)"
 	docker compose run --env GO_TIDY=1 --env GO_GET=1 --rm tyk-plugin-compiler CustomGoPlugin.so _$$(date +%s)
 	mv -f ./go/src/CustomGoPlugin*.so ./tyk/middleware/
 
