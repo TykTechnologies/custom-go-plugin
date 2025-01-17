@@ -16,9 +16,12 @@ jobs:
 
     - name: Copy Env Files
       run: cp .env.example .env
-      
+    
+    - name: Clean Go Plugin
+      run: DOCKER_USER=root make go-clean
+
     - name: Bundle Go Plugin
-      run: DOCKER_USER=root make bundle
+      run: DOCKER_USER=root make go-bundle
       
     - name: Upload Bundle
       uses: actions/upload-artifact@v3
