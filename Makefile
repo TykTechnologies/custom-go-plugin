@@ -4,7 +4,7 @@
 #
 ###############################################################################
 
-export TYK_VERSION := v5.3.0
+export TYK_VERSION := v5.3.9
 
 ifeq ($(origin DOCKER_USER), undefined)
 DOCKER_USER := 1000
@@ -73,17 +73,17 @@ docker-up:
 # Bring docker containers up /w oTel
 .PHONY: docker-up-otel
 docker-up-otel:
-	docker compose -f docker compose.yml -f deployments/otel/docker compose.yml up -d --remove-orphans tyk-dashboard tyk-gateway
+	docker compose -f docker-compose.yml -f deployments/otel/docker-compose.yml up -d --remove-orphans tyk-dashboard tyk-gateway
 
 # Bring docker containers up in OSS
 .PHONY: docker-up-oss
 docker-up-oss:
-	docker compose -f docker compose-oss.yml up -d --remove-orphans tyk-gateway
+	docker compose -f docker-compose-oss.yml up -d --remove-orphans tyk-gateway
 
 # Bring docker containers up in OSS /w oTel
 .PHONY: docker-up-oss-otel
 docker-up-oss-otel:
-	docker compose -f docker compose-oss.yml -f deployments/otel/docker compose.yml up -d --remove-orphans tyk-gateway
+	docker compose -f docker-compose-oss.yml -f deployments/otel/docker-compose.yml up -d --remove-orphans tyk-gateway
 
 # Bootstrap dashboard
 .PHONY: bootstrap
@@ -100,7 +100,7 @@ docker-down:
 docker-clean:
 	docker compose down --volumes --remove-orphans
 
-### Tyk Go Plugin ########################################################################
+# Use go version and dependencies from Tyk Plugin Compiler instead of local to prevent version mismatch
 go-init:=docker container run -v ${PWD}/go/src:/plugin-source -t --env GO111MODULE=on --workdir /plugin-source --entrypoint go --rm tykio/tyk-plugin-compiler:${TYK_VERSION} mod init tyk-plugin
 
 go-tidy:=docker container run -v ${PWD}/go/src:/plugin-source -t --env GO111MODULE=on --workdir /plugin-source --entrypoint go --rm tykio/tyk-plugin-compiler:${TYK_VERSION} mod tidy
