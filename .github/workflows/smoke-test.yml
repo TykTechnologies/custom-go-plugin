@@ -63,7 +63,7 @@ jobs:
             -e TYK_GW_MIDDLEWAREPATH=./middleware \
             -e TYK_GW_APPPATH=./apps/ \
             -e TYK_GW_ALLOWINSECURECONFIGS=true \
-            tykio/tyk-gateway:${{ env.TYK_VERSION }}-amd64
+            tykio/tyk-gateway:${{ env.TYK_VERSION }}
 
       - name: Wait for Gateway to be ready
         run: |
