@@ -45,20 +45,18 @@ jobs:
         run: |
           cp ./go/src/CustomGoPlugin*.so ./tyk/middleware/
 
-      # Run the gateway container connected to the service redis
+      # Run the gateway on host network so it can reach the Redis service on localhost:6379
       - name: Start Tyk Gateway
         run: |
           docker run -d --name tyk-gateway \
-            --network ${{ job.services.redis.network }} \
-            -p 8080:8080 \
+            --network host \
             -v ${{ github.workspace }}/tyk/middleware:/opt/tyk-gateway/middleware \
             -e TYK_GW_LISTENPORT=8080 \
             -e TYK_GW_SECRET=${{ env.TYK_GW_SECRET }} \
             -e TYK_GW_STORAGE_TYPE=redis \
-            -e TYK_GW_STORAGE_HOST=redis \
+            -e TYK_GW_STORAGE_HOST=localhost \
             -e TYK_GW_STORAGE_PORT=6379 \
             -e TYK_GW_POLICIES_POLICYSOURCE=file \
-            -e TYK_GW_POLICIES_POLICYRECORDNAME=tyk_policies \
             -e TYK_GW_USEDBAPPCONFIGS=false \
             -e TYK_GW_TEMPLATEPATH=./templates \
             -e TYK_GW_TYKJSPATH=./js/tyk.js \
@@ -76,14 +74,25 @@ jobs:
               echo "Gateway is ready!"
               break
             fi
+            if [ "$i" = "30" ]; then
+              echo "Gateway failed to start"
+              docker logs tyk-gateway 2>&1 | tail -30
+              exit 1
+            fi
             echo "Attempt $i/30 - status: $STATUS"
             sleep 2
           done
 
+      # Verify Redis is connected by checking gateway logs
+      - name: Verify Gateway startup
+        run: |
+          sleep 2
+          docker logs tyk-gateway 2>&1 | grep -i "redis\|error\|API loaded\|Gateway started" || true
+
       # Create an API definition with the Go plugin as pre-middleware
       - name: Create API with Go Plugin
         run: |
-          curl -s -X POST http://localhost:8080/tyk/apis \
+          RESULT=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/tyk/apis \
             --header "X-Tyk-Authorization: ${{ env.TYK_GW_SECRET }}" \
             --header "Content-Type: application/json" \
             --data '{
@@ -114,13 +123,22 @@ jobs:
                   }
                 }
               }
-            }'
+            }')
+          HTTP_CODE=$(echo "$RESULT" | tail -1)
+          BODY=$(echo "$RESULT" | head -n -1)
+          echo "Create API response ($HTTP_CODE): $BODY"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Failed to create API"
+            exit 1
+          fi
 
-      - name: Reload Gateway
+      - name: Reload Gateway and wait for API to load
         run: |
           curl -s http://localhost:8080/tyk/reload \
             --header "X-Tyk-Authorization: ${{ env.TYK_GW_SECRET }}"
-          sleep 3
+          sleep 5
+          # Confirm the API was loaded
+          docker logs tyk-gateway 2>&1 | tail -20
 
       # Smoke test: call the API and verify the plugin injected the header
       # httpbin.org/get echoes back all request headers in JSON
@@ -129,16 +147,17 @@ jobs:
           echo "Calling /httpbin/get to verify plugin header injection..."
           RESPONSE=$(curl -s http://localhost:8080/httpbin/get)
           echo "Response:"
-          echo "$RESPONSE" | jq .
+          echo "$RESPONSE" | jq . || echo "$RESPONSE"
 
           # httpbin echoes headers back — check for our injected header
-          if echo "$RESPONSE" | jq -e '.headers["X-Simpleheader-Inject"]' | grep -q "foo"; then
+          if echo "$RESPONSE" | jq -e '.headers["X-Simpleheader-Inject"]' 2>/dev/null | grep -q "foo"; then
             echo "SUCCESS: X-SimpleHeader-Inject header was injected by the Go plugin!"
           else
             echo "FAILURE: X-SimpleHeader-Inject header not found in response"
+            echo "Full response: $RESPONSE"
             exit 1
           fi
 
       - name: Gateway Logs (debug)
         if: always()
-        run: docker logs tyk-gateway 2>&1 | tail -50
+        run: docker logs tyk-gateway 2>&1 | tail -80
