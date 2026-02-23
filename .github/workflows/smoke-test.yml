@@ -1,0 +1,144 @@
+name: Smoke Test Go Plugin
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  TYK_VERSION: v5.3.0
+  TYK_GW_SECRET: 352d20ee67be67f6340b4c0605b044b7
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21.8'
+
+      # Build the plugin using the tyk-plugin-compiler
+      - name: Build Go Plugin
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/go/src:/plugin-source \
+            tykio/tyk-plugin-compiler:${{ env.TYK_VERSION }} \
+            CustomGoPlugin.so
+
+      - name: Move plugin to middleware dir
+        run: |
+          cp ./go/src/CustomGoPlugin*.so ./tyk/middleware/
+
+      # Run the gateway container connected to the service redis
+      - name: Start Tyk Gateway
+        run: |
+          docker run -d --name tyk-gateway \
+            --network ${{ job.services.redis.network }} \
+            -p 8080:8080 \
+            -v ${{ github.workspace }}/tyk/middleware:/opt/tyk-gateway/middleware \
+            -e TYK_GW_LISTENPORT=8080 \
+            -e TYK_GW_SECRET=${{ env.TYK_GW_SECRET }} \
+            -e TYK_GW_STORAGE_TYPE=redis \
+            -e TYK_GW_STORAGE_HOST=redis \
+            -e TYK_GW_STORAGE_PORT=6379 \
+            -e TYK_GW_POLICIES_POLICYSOURCE=file \
+            -e TYK_GW_POLICIES_POLICYRECORDNAME=tyk_policies \
+            -e TYK_GW_USEDBAPPCONFIGS=false \
+            -e TYK_GW_TEMPLATEPATH=./templates \
+            -e TYK_GW_TYKJSPATH=./js/tyk.js \
+            -e TYK_GW_MIDDLEWAREPATH=./middleware \
+            -e TYK_GW_APPPATH=./apps/ \
+            -e TYK_GW_ALLOWINSECURECONFIGS=true \
+            tykio/tyk-gateway:${{ env.TYK_VERSION }}-amd64
+
+      - name: Wait for Gateway to be ready
+        run: |
+          echo "Waiting for Tyk Gateway..."
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/hello 2>/dev/null || true)
+            if [ "$STATUS" = "200" ] || [ "$STATUS" = "302" ]; then
+              echo "Gateway is ready!"
+              break
+            fi
+            echo "Attempt $i/30 - status: $STATUS"
+            sleep 2
+          done
+
+      # Create an API definition with the Go plugin as pre-middleware
+      - name: Create API with Go Plugin
+        run: |
+          curl -s -X POST http://localhost:8080/tyk/apis \
+            --header "X-Tyk-Authorization: ${{ env.TYK_GW_SECRET }}" \
+            --header "Content-Type: application/json" \
+            --data '{
+              "name": "httpbin-smoke-test",
+              "slug": "httpbin-smoke-test",
+              "use_keyless": true,
+              "active": true,
+              "proxy": {
+                "target_url": "http://httpbin.org/",
+                "listen_path": "/httpbin/",
+                "strip_listen_path": true
+              },
+              "custom_middleware": {
+                "pre": [
+                  {
+                    "name": "AddFooBarHeader",
+                    "path": "/opt/tyk-gateway/middleware/CustomGoPlugin.so",
+                    "require_session": false
+                  }
+                ],
+                "driver": "goplugin"
+              },
+              "version_data": {
+                "not_versioned": true,
+                "versions": {
+                  "Default": {
+                    "name": "Default"
+                  }
+                }
+              }
+            }'
+
+      - name: Reload Gateway
+        run: |
+          curl -s http://localhost:8080/tyk/reload \
+            --header "X-Tyk-Authorization: ${{ env.TYK_GW_SECRET }}"
+          sleep 3
+
+      # Smoke test: call the API and verify the plugin injected the header
+      # httpbin.org/get echoes back all request headers in JSON
+      - name: Smoke Test - Verify header injection
+        run: |
+          echo "Calling /httpbin/get to verify plugin header injection..."
+          RESPONSE=$(curl -s http://localhost:8080/httpbin/get)
+          echo "Response:"
+          echo "$RESPONSE" | jq .
+
+          # httpbin echoes headers back — check for our injected header
+          if echo "$RESPONSE" | jq -e '.headers["X-Simpleheader-Inject"]' | grep -q "foo"; then
+            echo "SUCCESS: X-SimpleHeader-Inject header was injected by the Go plugin!"
+          else
+            echo "FAILURE: X-SimpleHeader-Inject header not found in response"
+            exit 1
+          fi
+
+      - name: Gateway Logs (debug)
+        if: always()
+        run: docker logs tyk-gateway 2>&1 | tail -50
