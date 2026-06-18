@@ -1,208 +1,572 @@
-# Tyk Gateway Custom Go Plugins
+# Tyk Custom Go Plugin — Developer Guide
 
-### Description
+A development environment for writing, building, and deploying custom Go plugins for Tyk Gateway. Everything compiles inside Docker — **no local Go installation required**.
 
-This project is an environment for writing, compiling and bundling Golang plugins for the Tyk Gateway.
+---
 
-### Quickstart
+## Table of Contents
 
-Follow these [instructions](https://tyk.io/docs/nightly/plugins/get-started-plugins/).
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Project Structure](#project-structure)
+- [How It Works](#how-it-works)
+- [Environment Setup](#environment-setup)
+- [Build Reference](#build-reference)
+- [Writing Your Plugin](#writing-your-plugin)
+- [Deploying with Bundles](#deploying-with-bundles)
+- [Multi-Architecture Builds](#multi-architecture-builds)
+- [Debugging](#debugging)
+- [OpenTelemetry](#opentelemetry)
+- [Makefile Command Reference](#makefile-command-reference)
+- [Troubleshooting](#troubleshooting)
 
-Alternatively, you can watch our video Quickstart [here](https://www.youtube.com/watch?v=2AsSWZRZW24).
+---
 
-### Dependencies
+## Prerequisites
 
-- Golang
-- Make
-- Docker
-- Docker Compose
+| Tool | Version | Install |
+|---|---|---|
+| Docker | 24+ | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/) |
+| Docker Compose | v2+ | Included with Docker Desktop |
+| Make | any | `brew install make` / `apt-get install build-essential` |
 
-### Relevant Documentation
+> **No local Go installation needed.** The `tyk-plugin-compiler` Docker image provides the exact Go toolchain required. Installing Go locally risks version mismatches that cause runtime load failures.
 
-- [Native Golang Plugins](https://pkg.go.dev/plugin)
-- [Tyk Custom Plugins](https://tyk.io/docs/plugins/)
-- [Tyk Golang Plugins](https://tyk.io/docs/plugins/supported-languages/golang/)
-- [Tyk Authentication Plugins](https://tyk.io/docs/plugins/auth-plugins/)
-- [Tyk Authentication Plugin ID Extractor](https://tyk.io/docs/plugins/auth-plugins/id-extractor/)
-- [Tyk OAuth 2.0](https://tyk.io/docs/basic-config-and-security/security/authentication-authorization/oauth-2-0/)
-- [Tyk Plugin Bundles](https://tyk.io/docs/plugins/how-to-serve-plugins/plugin-bundles/)
-- [Tyk Docker Pro Demo](https://tyk.io/docs/tyk-on-premises/docker/docker-pro-demo/)
-
-## Getting Started
-
-To get started, make sure you have Go installed locally on your machine. Visit https://go.dev/doc/install to download
-the latest version of Go and for instructions how to install it for your operating system.
-
-Alternatively if on Ubuntu >= 21.04:
-
-```shell
-$ sudo snap install go --classic
-```
-or if on MacOS with [Homebrew](https://brew.sh/):
-```shell
-$ brew install go
-```
-Verify Go is installed on your machine by running in a terminal:
-```shell
-$ go version
-go version go1.17.4 linux/amd64
-```
-You will also need `make` to run project commands.
-
-On Ubuntu:
-```shell
-$ sudo apt-get install -y build-essential
+Verify your setup:
+```sh
+docker --version          # Docker version 24+
+docker compose version    # Docker Compose version v2+
+make --version            # GNU Make 4+
 ```
 
-On MacOS with Homebrew:
-```shell
-$ brew install make
+---
+
+## Quick Start
+
+### Enterprise (Pro)
+
+```sh
+# 1. Copy and populate your environment file
+cp .env.example .env
+# Edit .env — add your TYK_LICENSE_KEY
+
+# 2. Bring up the full Tyk stack and build the plugin
+make install
 ```
 
-Verify `make` is installed on your machine by running in a terminal:
-```shell
-$ make --version
-GNU Make 4.3
-Built for x86_64-pc-linux-gnu
-Copyright (C) 1988-2020 Free Software Foundation, Inc.
-License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
-This is free software: you are free to change and redistribute it.
-There is NO WARRANTY, to the extent permitted by law.
+### Open Source (OSS)
+
+```sh
+make up-oss build
 ```
 
-This project uses [tyk-pro-docker-demo](https://github.com/TykTechnologies/tyk-pro-docker-demo) 
-as a local development environment to test and validate the Go authentication plugin, so we will also require 
-[Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) 
-to be installed on your machine.
+The gateway will be available at `http://localhost:8080`. The Tyk Dashboard (Pro only) is at `http://localhost:3000`.
 
-Verify Docker and Docker Compose are installed by running in a terminal:
-```shell
-$ docker --version
-Docker version 24.0.5, build ced0996
-$ docker compose version
-Docker Compose version v2.23.0
+---
+
+## Project Structure
+
+```
+.
+├── go/src/
+│   ├── CustomGoPlugin.go       # Your plugin source code
+│   ├── go.mod                  # Auto-managed — do not edit manually
+│   ├── go.sum
+│   └── vendor/                 # Vendored dependencies (auto-generated)
+│
+├── tyk/
+│   ├── middleware/             # Built .so files land here (gateway reads this dir)
+│   ├── bundle/
+│   │   ├── manifest-template.json   # Edit this to register your hook functions
+│   │   └── bundle.zip               # Generated by `make bundle`
+│   ├── confs/                  # Gateway, dashboard, pump env configs
+│   └── scripts/                # Bootstrap scripts
+│
+├── deployments/otel/           # OpenTelemetry + Jaeger stack
+├── docker-compose.yml          # Pro stack
+├── docker-compose-oss.yml      # OSS stack
+├── Makefile
+└── .env                        # Your secrets (git-ignored)
 ```
 
-## Building the Go Plugin
+---
 
-A specific of Tyk Golang plugins is that they need to be built using exactly the same Tyk binary as the one to be 
-installed. In order to make it work, we provide a special Docker image, which we internally use for building our
-official binaries too. These Docker images can be found at https://hub.docker.com/r/tykio/tyk-plugin-compiler.
+## How It Works
 
-Therefore, it is imperative that the version of the `tyk-plugin-compiler` that you use must match the version of 
-Tyk Gateway you are using, e.g., `tykio/tyk-plugin-compiler:v4.0.0` for `tykio/tyk-gateway:v4.0.0`
+### The Plugin Compiler
 
-You can set version, by setting TYK_VERSION environment variable, like: `TYK_VERSION=v4.0.0`
+Tyk Go plugins are compiled using the `tykio/tyk-plugin-compiler` Docker image — the **same** toolchain used to build Tyk Gateway itself. This guarantees that your plugin and the gateway share identical build flags, Go version, and dependency tree.
 
-To build the plugin using the `tyk-plugin-compiler`, run the following command in a terminal:
-```shell
-$ TYK_VERSION=v4.2.1 make build
+> **Critical:** The compiler version must exactly match your gateway version. A mismatch causes a runtime error: `plugin was built with a different version of package internal/goarch`.
+
+The `TYK_VERSION` in the Makefile controls both:
+
+```makefile
+export TYK_VERSION := v5.8.9   # Applies to both gateway and compiler images
 ```
 
-This command will run the plugin compiler and create a Go plugin called `CustomGoPlugin.so` 
-which can be found in `tyk/middleware/CustomGoPlugin.so` after it successfully builds. This `.so` file can be loaded 
-into Tyk Gateway as a custom plugin directly from the filesystem, but in a production setting, it is strongly recommended to 
-load the plugin as a [plugin bundle](https://tyk.io/docs/plugins/how-to-serve-plugins/plugin-bundles/).
+### Compiler CLI
 
-The `make build` command will also restart
-Tyk Gateway if the container is running so that any changes made to the plugin will be applied after being built. See below
-for more background on updating Go plugins.
-
-## Deploying the Go Plugin
-
-In production environments, it is strongly recommended to deploy your Tyk custom plugin
-as a [plugin bundle](https://tyk.io/docs/plugins/how-to-serve-plugins/plugin-bundles/).
-
-A plugin bundle is a ZIP file that contains your custom middleware files and its associated configuration block
-(the `custom_middleware` block). The idea behind plugin bundles is to enhance the process of attaching and loading custom
-middleware. It allows you to avoid duplicating the content of the `custom_middleware` section onto each of your APIs definitions,
-which is still possible if you do not want to support a bundle server within your global Tyk setup.
-
-Tyk provides a bundler tool to generate plugin bundles. Please note that the generated bundles must be served using your
-own web server.
-See [Downloading and Updating Bundles](https://tyk.io/docs/plugins/how-to-serve-plugins/plugin-bundles/#downloading-and-updating-bundles)
-for more documentation.
-
-To run the bundler tool and generate a plugin bundle, run the following command in a terminal:
-```shell
-$ make bundle
+```
+tyk-plugin-compiler <output.so> [build_id] [GOOS] [GOARCH]
 ```
 
-This will create a production-ready plugin bundle that can be found at `tyk/bundle/bundle.zip`.
+| Argument | Required | Description |
+|---|---|---|
+| `output.so` | Yes | Base name of the output file |
+| `build_id` | No | Unique suffix — enables hot-reload (see below) |
+| `GOOS` | No | Target OS (default: `linux`) |
+| `GOARCH` | No | Target arch (`amd64`, `arm64`) |
 
-## Updating the Go Plugin
+### Output File Naming
 
-Loading an updated version of your plugin require one of the following actions:
+Since Tyk v4.1.0, the compiler automatically appends version and platform information:
 
-- An API reload with a NEW path or file name of your `.so` file with the plugin. You will need to update the API spec
-- section `"custom_middleware"`, specifying a new value for the `"path"` field of the plugin you need to reload.
-- Tyk main process reload. This will force a reload of all Golang plugins for all APIs.
-
-In this project, we will be loading the plugin through the filesystem for development purposes, but it is strongly
-recommended to use the plugin bundles for production environments.
-
-If a plugin is loaded as a bundle and you need to update it you will need to update your API spec with new `.zip` file
-name in the `"custom_middleware_bundle"` field. Make sure the new `.zip` file is uploaded and available via the bundle
-HTTP endpoint before you update your API spec.
-
-### Open Telemetry and Troubleshooting
-The **Custom Go Plugin repository** now deploys [Open Telemetry with Jaeger](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/distributed-tracing/open-telemetry/otel_jaeger/) by default to enhance API observability and troubleshooting experience. You can visit the **Jaeger Dashboard** at [http://localhost:16686/](http://localhost:16686/). **It is very important to note that the support for Open Telemetry with the Tyk Gateway is only avaiable for versions `v5.2.0+`.**
-
-To get started, please review our documentation on [Open Telemetry Overview](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/distributed-tracing/open-telemetry/open-telemetry-overview/). 
-
-You can refer to our official documentation on [How to instrument Custom Go Plugins with OpenTelemetry](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/plugins/otel-plugins/).
-
-To stand up, oTel example: 
-```shell
-$ make up-otel build
+```
+CustomGoPlugin.so  →  CustomGoPlugin_v5.8.9_linux_amd64.so
 ```
 
-To stand up, oTel example in OSS:
-```shell
-$ make up-oss-otel build
+This lets the gateway find the right binary for its version and architecture automatically, and allows multiple platform builds to coexist in the same directory.
+
+### Hot Reload via `build_id`
+
+Go's runtime prevents loading the same `.so` file twice in the same process. By passing a unique `build_id` (e.g. a Unix timestamp), each build produces a distinct binary path, allowing the gateway to reload the plugin **without a full restart** — just a gateway reload.
+
+The Makefile uses `_$(date +%s)` as the `build_id`:
+```
+CustomGoPlugin_v5.8.9_linux_amd64.so  →  CustomGoPlugin_v5.8.9_linux_amd64_1718123456.so
 ```
 
-### Examples
-- [Open Telemetry Instrumentation](plugins/otel-instrumentation/)
+### Build Environment Variables
 
-## Project Lifecycle Makefile Commands
+| Variable | Effect |
+|---|---|
+| `GO_TIDY=1` | Runs `go mod tidy` before building |
+| `GO_GET=1` | Fetches the exact Tyk gateway dependency version |
+| `GO111MODULE=on` | Enforces Go modules |
+| `DEBUG=1` | Verbose compiler output |
+| `GOEXPERIMENT=boringcrypto` | FIPS-compliant crypto (`build-fips` only) |
 
-To build the project and bring up your local instance of Tyk, run in a terminal:
-```shell
-$ make
+---
+
+## Environment Setup
+
+Copy the example file and fill in your values:
+
+```sh
+cp .env.example .env
 ```
 
-To build the Go plugin and restart the Tyk Gateway if its currently running, run in a terminal:
-```shell
-$ make build
+| Variable | Required | Description |
+|---|---|---|
+| `TYK_LICENSE_KEY` | Pro only | Your Tyk Dashboard license key |
+| `TYK_GATEWAY_IMAGE` | No | Override gateway image (e.g. FIPS variant) |
+
+The `TYK_VERSION` is set in the Makefile, not `.env`, so it applies consistently across all `make` targets.
+
+---
+
+## Build Reference
+
+### Standard Build
+
+Builds for your host's architecture (auto-detected from `uname -m`):
+
+```sh
+make build
 ```
 
-To run the Tyk bundler tool and generate a production plugin bundle, run in a terminal:
-```shell
-$ make bundle
+On an Apple Silicon Mac this produces `linux/arm64`. On an Intel machine it produces `linux/amd64`.
+
+### Cross-Compile to a Specific Architecture
+
+```sh
+make build GOARCH=amd64    # Force amd64 (e.g. for a cloud deployment)
+make build GOARCH=arm64    # Force arm64 (e.g. for Graviton/Apple Silicon hosts)
 ```
 
-To clean ephemeral project files (including built plugins), run in a terminal:
-```shell
-$ make clean
+### Build for Both Architectures
+
+Produces `amd64` and `arm64` binaries in a single pass:
+
+```sh
+make build-multiarch
 ```
 
-To bring up the Docker containers running Tyk, run in a terminal:
-```shell
-$ make up
+### FIPS Build
+
+```sh
+make build-fips
+# Or cross-compile:
+make build-fips GOARCH=amd64
 ```
 
-To bring down the Docker containers running Tyk, run in a terminal:
-```shell
-$ make down
+### Bundle Build (production)
+
+Compiles the plugin, generates `manifest.json`, and zips everything into `tyk/bundle/bundle.zip`:
+
+```sh
+make bundle
 ```
 
-To get logs from the Docker containers running Tyk, run in a terminal:
-```shell
-$ make logs
+The bundle manifest inherits the same `GOARCH` as the build, so `make bundle GOARCH=arm64` produces an arm64-targeted bundle.
+
+---
+
+## Writing Your Plugin
+
+### Required Structure
+
+Every plugin must declare `package main` and include an empty `main()`:
+
+```go
+package main
+
+import "net/http"
+
+func main() {} // Required — must exist but must be empty
+
+func init() {
+    // Runs once when the gateway first loads the plugin.
+    // Good for: setting up connection pools, pre-loading config.
+}
 ```
 
-To get the current status of the Docker containers running Tyk, run in a terminal:
-```shell
-$ make status
+### Hook Types
+
+| Hook | Runs when | Signature |
+|---|---|---|
+| `pre` | Before authentication | `func(http.ResponseWriter, *http.Request)` |
+| `auth_check` | Authentication step | `func(http.ResponseWriter, *http.Request)` |
+| `post_key_auth` | After authentication | `func(http.ResponseWriter, *http.Request)` |
+| `post` | Before upstream round-trip | `func(http.ResponseWriter, *http.Request)` |
+| `response` | After upstream responds | `func(http.ResponseWriter, *http.Response, *http.Request)` |
+
+> Note: `response` hooks use a **different** signature — they receive an extra `*http.Response` parameter.
+
+### Minimal Pre-Hook Example
+
+```go
+package main
+
+import (
+    "log"
+    "net/http"
+)
+
+func main() {}
+
+func AddHeader(w http.ResponseWriter, r *http.Request) {
+    r.Header.Set("X-Custom-Header", "hello")
+    log.Println("AddHeader: injected header")
+}
 ```
+
+### Terminating a Request Early
+
+Write directly to the `ResponseWriter` — the gateway will not forward the request upstream:
+
+```go
+func AuthCheck(w http.ResponseWriter, r *http.Request) {
+    if r.Header.Get("Authorization") == "" {
+        w.WriteHeader(http.StatusUnauthorized)
+        return
+    }
+    // allow through
+}
+```
+
+### Accessing Plugin Config Data
+
+Runtime config values set in the API definition are available via the OAS context:
+
+```go
+import "github.com/TykTechnologies/tyk/ctx"
+
+func ProcessRequest(w http.ResponseWriter, r *http.Request) {
+    oas := ctx.GetOASDefinition(r)
+    if oas == nil {
+        return
+    }
+    data := oas.GetTykMiddleware().Global.PluginConfig.Data.Value
+    myValue := data["my_key"].(string)
+}
+```
+
+### Registering Your Hook in the Manifest
+
+Edit `tyk/bundle/manifest-template.json` to point at your exported function:
+
+```json
+{
+  "file_list": [
+    "CustomGoPlugin_replace_version_linux_replace_platform.so"
+  ],
+  "custom_middleware": {
+    "pre": [
+      {
+        "name": "YourFunctionName",
+        "path": "CustomGoPlugin.so",
+        "require_session": false,
+        "raw_body_only": false
+      }
+    ],
+    "driver": "goplugin"
+  }
+}
+```
+
+The `replace_version` and `replace_platform` placeholders are substituted by `make bundle` using `TYK_VERSION` and `GOARCH`.
+
+---
+
+## Deploying with Bundles
+
+Bundles are the recommended production deployment method. A bundle is a ZIP containing your `.so` and `manifest.json`, served over HTTP. The gateway downloads and caches it on startup.
+
+### Generate the Bundle
+
+```sh
+make bundle           # bundle for host arch
+make bundle GOARCH=amd64   # force amd64
+```
+
+The output is `tyk/bundle/bundle.zip`.
+
+### Serve the Bundle
+
+You need an HTTP server accessible from the gateway container. For local development, `python3 -m http.server 9000` from the `tyk/bundle/` directory works. For production, use S3, nginx, or any static host.
+
+Configure the gateway to point at your bundle server:
+
+```
+# tyk/confs/tyk.env
+TYK_GW_ENABLEBUNDLEDOWNLOADER=true
+TYK_GW_BUNDLEBASEURL=http://your-bundle-server:9000
+```
+
+Then in your API definition, set:
+
+```json
+"custom_middleware_bundle": "bundle.zip"
+```
+
+### Updating a Bundle
+
+The gateway caches bundles by filename. To force a reload:
+1. Generate a new bundle with a new filename (e.g. include a version or timestamp)
+2. Update `custom_middleware_bundle` in your API definition to the new filename
+3. Reload the API — no gateway restart needed
+
+---
+
+## Multi-Architecture Builds
+
+The `tyk-plugin-compiler` image runs as `linux/amd64` but can cross-compile to any supported target.
+
+| Command | Output |
+|---|---|
+| `make build` | Auto-detected from host (`amd64` on Intel, `arm64` on Apple Silicon) |
+| `make build GOARCH=amd64` | `CustomGoPlugin_vX.Y.Z_linux_amd64.so` |
+| `make build GOARCH=arm64` | `CustomGoPlugin_vX.Y.Z_linux_arm64.so` |
+| `make build-multiarch` | Both `amd64` and `arm64` in one pass |
+
+The `docker-compose.yml` pins the compiler service to `platform: linux/amd64`, so cross-compilation works correctly on Apple Silicon without any extra flags.
+
+### Upgrading Tyk Version
+
+Before upgrading the gateway, recompile your plugin for the new version:
+
+```sh
+# In Makefile: update TYK_VERSION := vX.Y.Z
+make clean
+make build
+```
+
+The gateway will automatically prefer `CustomGoPlugin_vX.Y.Z_linux_amd64.so` over the old version filename.
+
+---
+
+## Debugging
+
+### View Gateway Logs (formatted)
+
+```sh
+make log        # formatted, follows live output
+make logs       # raw logs from all containers
+```
+
+### Verbose Compiler Output
+
+Pass `DEBUG=1` to the compiler for verbose build output:
+
+```sh
+docker compose run \
+  -v ${PWD}/go/src:/plugin-source \
+  --env DEBUG=1 --env GO_TIDY=1 --env GO_GET=1 --env GO111MODULE=on \
+  --rm tyk-plugin-compiler CustomGoPlugin.so _test linux amd64
+```
+
+### Verify a Plugin Loads
+
+The gateway binary ships with a plugin loader you can use to validate a `.so` before deploying:
+
+```sh
+# Inside the gateway container
+docker compose exec tyk-gateway \
+  /opt/tyk-gateway/tyk plugin load -f /opt/tyk-gateway/middleware/CustomGoPlugin_vX.Y.Z_linux_amd64.so -s ProcessRequest
+```
+
+### Inspect Build Metadata
+
+Compare the Go version and build flags embedded in the gateway binary vs your plugin:
+
+```sh
+# Gateway binary
+docker compose exec tyk-gateway go version -m /opt/tyk-gateway/tyk
+
+# Plugin .so
+go version -m ./tyk/middleware/CustomGoPlugin_*.so
+```
+
+Both should show the same `go` version and identical `build` tags (especially `-trimpath`).
+
+### Inspect Exported Symbols
+
+Check which functions your plugin exports:
+
+```sh
+nm -gD ./tyk/middleware/CustomGoPlugin_*.so | grep -v " U "
+```
+
+### OpenTelemetry Tracing
+
+Stand up the gateway with Jaeger for distributed tracing:
+
+```sh
+make up-otel build         # Pro + OTel
+make up-oss-otel build     # OSS + OTel
+```
+
+Jaeger UI: `http://localhost:16686`
+
+Requires Tyk v5.2.0+. See [OpenTelemetry docs](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/distributed-tracing/open-telemetry/open-telemetry-overview/) and [instrumenting plugins with OTel](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/plugins/otel-plugins/).
+
+---
+
+## OpenTelemetry
+
+The `deployments/otel/` directory provides an OpenTelemetry Collector + Jaeger all-in-one stack.
+
+```sh
+make up-otel build        # Enterprise with tracing
+make up-oss-otel build    # OSS with tracing
+```
+
+Plugin instrumentation uses the Tyk OTel SDK:
+
+```go
+import "github.com/TykTechnologies/opentelemetry/trace"
+
+func MyPlugin(w http.ResponseWriter, r *http.Request) {
+    _, span := trace.NewSpanFromContext(r.Context(), "", "my-operation")
+    defer span.End()
+    span.SetStatus(trace.SPAN_STATUS_OK, "")
+    // your logic
+}
+```
+
+---
+
+## Makefile Command Reference
+
+### Project Lifecycle
+
+| Command | Description |
+|---|---|
+| `make` / `make install` | Bring up the full stack and build the plugin |
+| `make up` | Start all Pro services |
+| `make up-oss` | Start all OSS services |
+| `make up-otel` | Start Pro services + OpenTelemetry |
+| `make up-oss-otel` | Start OSS services + OpenTelemetry |
+| `make down` | Stop all containers |
+| `make status` | Show container status |
+| `make logs` | Tail all container logs |
+| `make log` | Tail gateway log (formatted, human-readable) |
+| `make clean` | Stop containers and remove all volumes and built artifacts |
+
+### Build Commands
+
+| Command | Description |
+|---|---|
+| `make build` | Build plugin for host arch (auto-detected) |
+| `make build GOARCH=arm64` | Cross-compile to arm64 |
+| `make build GOARCH=amd64` | Cross-compile to amd64 |
+| `make build-multiarch` | Build for both amd64 and arm64 |
+| `make build-fips` | Build with FIPS-compliant crypto |
+| `make build-fips GOARCH=amd64` | FIPS build for amd64 |
+| `make bundle` | Build plugin and generate production bundle zip |
+| `make bundle GOARCH=arm64` | Bundle targeting arm64 |
+
+### Development
+
+| Command | Description |
+|---|---|
+| `make lint` | Run golangci-lint |
+| `make test` | Run Go unit tests |
+| `make coverage` | Generate test coverage report |
+
+---
+
+## Troubleshooting
+
+### `plugin was built with a different version of package internal/goarch`
+
+The compiler version doesn't match the gateway version. Check `TYK_VERSION` in the Makefile — it must be identical for both images:
+
+```makefile
+export TYK_VERSION := v5.8.9   # bump this together
+```
+
+Then rebuild: `make clean && make build`.
+
+### `plugin already loaded` / plugin fails to reload
+
+This happens when the same `.so` filename is loaded twice. The `make build` command appends a Unix timestamp as `build_id`, so each build gets a unique filename. If you see this error, ensure you're not manually running the compiler without a `build_id`.
+
+### Module initialization fails (`go: cannot find module providing ...`)
+
+The `go/src/go.mod` file is missing or stale. Delete it and let make regenerate it:
+
+```sh
+make go-clean
+make build
+```
+
+### Plugin compiles but gateway doesn't call my function
+
+1. Verify the function name in `tyk/bundle/manifest-template.json` (or your API definition's `custom_middleware`) **exactly** matches the exported Go function name — case-sensitive.
+2. Check the gateway log (`make log`) for `GoPlugin` or `plugin` errors on startup.
+3. Ensure `driver: "goplugin"` is set in your API definition.
+
+### Apple Silicon / M-series Mac
+
+No special steps needed. The `tyk-plugin-compiler` service is pinned to `platform: linux/amd64` in `docker-compose.yml`, so it runs under Rosetta 2 emulation via Docker Desktop. Cross-compilation to `arm64` still works by passing `GOARCH=arm64` to `make build`.
+
+### Gateway starts but plugin is not loaded
+
+Check that:
+- The `.so` file is in `tyk/middleware/`
+- The API definition's `custom_middleware.path` matches the exact filename (or relies on the gateway's version-aware filename fallback)
+- The gateway was restarted after building: `make build` does this automatically via `restart-gateway`
+
+---
+
+## Further Reading
+
+- [Tyk Go Plugin Docs](https://tyk.io/docs/api-management/plugins/golang)
+- [Plugin Compiler Reference](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/plugins/golang/go-plugin-compiler/)
+- [Plugin Bundles](https://tyk.io/docs/plugins/how-to-serve-plugins/plugin-bundles/)
+- [Writing Go Plugins](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/plugins/golang/writing-go-plugins/)
+- [OTel Plugin Instrumentation](https://tyk.io/docs/product-stack/tyk-gateway/advanced-configurations/plugins/otel-plugins/)
+- [Plugin Compiler image on Docker Hub](https://hub.docker.com/r/tykio/tyk-plugin-compiler)

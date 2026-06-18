@@ -4,10 +4,27 @@
 #
 ###############################################################################
 
-export TYK_VERSION := v5.7.2
+export TYK_VERSION := v5.8.9
 
 ifeq ($(origin DOCKER_USER), undefined)
 DOCKER_USER := 1000
+endif
+
+# Target OS — override with: make build GOOS=linux
+ifeq ($(origin GOOS), undefined)
+GOOS := linux
+endif
+
+# Target architecture — auto-detected from host, override with: make build GOARCH=arm64
+ifeq ($(origin GOARCH), undefined)
+  HOST_ARCH := $(shell uname -m)
+  ifeq ($(HOST_ARCH), x86_64)
+    GOARCH := amd64
+  else ifeq ($(HOST_ARCH), aarch64)
+    GOARCH := arm64
+  else
+    GOARCH := $(HOST_ARCH)
+  endif
 endif
 
 # Default task: sets up development environment
@@ -15,8 +32,14 @@ install: up build
 
 ### PROJECT ###################################################################
 
-# Builds the Go plugin
+# Builds the Go plugin for the detected/specified arch (default: host arch)
 build: go-build restart-gateway
+
+# Builds the Go plugin for both linux/amd64 and linux/arm64
+build-multiarch: go-build-multiarch restart-gateway
+
+# Builds the Go plugin with FIPS support
+build-fips: go-build-fips restart-gateway
 
 # Builds production-ready plugin bundle
 bundle: go-bundle restart-gateway
@@ -68,7 +91,7 @@ docker-gateway-log:
 # Bring docker containers up
 .PHONY: docker-up
 docker-up:
-	docker compose up -d --remove-orphans tyk-dashboard tyk-gateway
+	docker compose up -d --remove-orphans
 
 # Bring docker containers up /w oTel
 .PHONY: docker-up-otel
@@ -103,27 +126,45 @@ docker-clean:
 # Use go version and dependencies from Tyk Plugin Compiler instead of local to prevent version mismatch
 go-init:=docker compose run -v ${PWD}/go/src:/plugin-source -t --env GO_TIDY=1 --env GO_GET=1 --env GO111MODULE=on --workdir /plugin-source --entrypoint go --rm tyk-plugin-compiler mod init tyk-plugin
 
-go-get:=go get -d github.com/TykTechnologies/tyk@`git ls-remote https://github.com/TykTechnologies/tyk.git refs/tags/${TYK_VERSION} | awk '{print $$1;}'`
+go-get:=docker compose run -v ${PWD}/go/src:/plugin-source -t --env GO_TIDY=1 --env GO_GET=1 --env GO111MODULE=on --workdir /plugin-source --entrypoint go --rm tyk-plugin-compiler get -d github.com/TykTechnologies/tyk@`git ls-remote https://github.com/TykTechnologies/tyk.git refs/tags/${TYK_VERSION} | awk '{print $$1;}'`
 
 go-tidy:=docker compose run -v ${PWD}/go/src:/plugin-source -t --env GO_TIDY=1 --env GO_GET=1 --env GO111MODULE=on --workdir /plugin-source --entrypoint go --rm tyk-plugin-compiler mod tidy
 
 go-vendor:=docker compose run -v ${PWD}/go/src:/plugin-source -t --env GO_TIDY=1 --env GO_GET=1 --env GO111MODULE=on --workdir /plugin-source --entrypoint go --rm tyk-plugin-compiler mod vendor
 
 go/src/go.mod:
-	cd ./go/src ; \
-	$(go-init) ; \
-	$(go-get); \
-	$(go-tidy) ; \
+	$(go-init)
+	$(go-get)
+	$(go-tidy)
 	$(go-vendor)
 
-# Builds Go plugin and moves it into local Tyk instance
-# docker compose run --env GO_TIDY=1 --env GO_GET=1 --rm tyk-plugin-compiler CustomGoPlugin.so _$$(date +%s)
+# Builds Go plugin for GOOS/GOARCH (auto-detected from host, or override: make build GOARCH=arm64)
 .PHONY: go-build
 go-build: go/src/go.mod
-	/bin/sh -c "cd ./go/src && $(go-tidy) && $(go-vendor)"
-	docker compose run -v ${PWD}/go/src:/plugin-source --env GO_TIDY=1 --env GO_GET=1 --env GO111MODULE=on --rm tyk-plugin-compiler CustomGoPlugin.so _$$(date +%s)
+	$(go-tidy)
+	$(go-vendor)
+	docker compose run -v ${PWD}/go/src:/plugin-source --env GO_TIDY=1 --env GO_GET=1 --env GO111MODULE=on --rm tyk-plugin-compiler CustomGoPlugin.so _$$(date +%s) $(GOOS) $(GOARCH)
 	mv -f ./go/src/CustomGoPlugin*.so ./tyk/middleware/
-	ls -l && cat go.mod
+	@echo "Built for $(GOOS)/$(GOARCH):" && ls -1 ./tyk/middleware/CustomGoPlugin*.so
+
+# Builds Go plugin with FIPS support
+.PHONY: go-build-fips
+go-build-fips: go/src/go.mod
+	$(go-tidy)
+	$(go-vendor)
+	docker compose run -v ${PWD}/go/src:/plugin-source --env GO_TIDY=1 --env GO_GET=1 --env GO111MODULE=on -e GOEXPERIMENT=boringcrypto --rm tyk-plugin-compiler CustomGoPlugin.so _$$(date +%s) $(GOOS) $(GOARCH)
+	mv -f ./go/src/CustomGoPlugin*.so ./tyk/middleware/
+	@echo "Built (FIPS) for $(GOOS)/$(GOARCH):" && ls -1 ./tyk/middleware/CustomGoPlugin*.so
+
+# Builds Go plugin for both linux/amd64 and linux/arm64 in a single pass
+.PHONY: go-build-multiarch
+go-build-multiarch: go/src/go.mod
+	$(go-tidy)
+	$(go-vendor)
+	docker compose run -v ${PWD}/go/src:/plugin-source --env GO_TIDY=1 --env GO_GET=1 --env GO111MODULE=on --rm tyk-plugin-compiler CustomGoPlugin.so _$$(date +%s) linux amd64
+	docker compose run -v ${PWD}/go/src:/plugin-source --env GO_TIDY=1 --env GO_GET=1 --env GO111MODULE=on --rm tyk-plugin-compiler CustomGoPlugin.so _$$(date +%s) linux arm64
+	mv -f ./go/src/CustomGoPlugin*.so ./tyk/middleware/
+	@echo "Built for linux/amd64 and linux/arm64:" && ls -1 ./tyk/middleware/CustomGoPlugin*.so
 
 # Runs Go Linter
 lint:
@@ -151,7 +192,7 @@ coverage:
 .PHONY: go-bundle
 go-bundle: go-build
 	sed "s/replace_version/$(TYK_VERSION)/g" tyk/bundle/manifest-template.json | \
-	sed "s/replace_platform/amd64/g" > tyk/bundle/manifest.json
+	sed "s/replace_platform/$(GOARCH)/g" > tyk/bundle/manifest.json
 	cp tyk/middleware/CustomGoPlugin*.so tyk/bundle/
 	docker compose run --rm --user=$(DOCKER_USER) -w /opt/tyk-gateway/bundle tyk-gateway bundle build -y
 	rm tyk/bundle/CustomGoPlugin*.so
@@ -164,7 +205,7 @@ go-clean:
 	-rm -rf ./go/src/go.sum
 	-rm -f ./tyk/middleware/CustomGoPlugin*.so
 	-rm -f ./tyk/bundle/CustomGoPlugin*.so
-	-rm -f ./tyk/bundle/manifest.so
+	-rm -f ./tyk/bundle/manifest.json
 	-rm -f ./tyk/bundle/bundle.zip
 
 # Restarts the Tyk Gateway to instantly load new iterations of the Go plugin

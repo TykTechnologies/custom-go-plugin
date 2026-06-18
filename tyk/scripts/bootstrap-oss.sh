@@ -7,7 +7,7 @@ if [ "302" == "$status" ] || [ "200" == "$status" ]; then
 
   # Create httpbin API
   curl -s -X POST localhost:8080/tyk/apis \
-    --header "X-Tyk-Authorization: 352d20ee67be67f6340b4c0605b044b7" \
+    --header "X-Tyk-Authorization: ${TYK_GW_SECRET}" \
     --data "{
         \"jwt_issued_at_validation_skew\": 0,
         \"upstream_certificates\": {},
@@ -478,6 +478,6 @@ if [ "302" == "$status" ] || [ "200" == "$status" ]; then
 
    # Create httpbin API
   curl -s localhost:8080/tyk/reload \
-    --header "X-Tyk-Authorization: 352d20ee67be67f6340b4c0605b044b7" > /dev/null
+    --header "X-Tyk-Authorization: ${TYK_GW_SECRET}" > /dev/null
 
 fi
