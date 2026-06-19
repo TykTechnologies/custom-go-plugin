@@ -217,3 +217,23 @@ restart-gateway:
 .PHONY: bootstrap-oss
 bootstrap-oss:
 	$(shell ./tyk/scripts/bootstrap-oss.sh)
+
+### DEVELOPER TOOLS ###########################################################
+
+# Watch go/src/ for .go changes and auto-rebuild + reload the gateway (polls every 3s; Ctrl-C to stop)
+.PHONY: watch
+watch:
+	@echo "Watching go/src/ for changes — Ctrl-C to stop"
+	@STAMP=$$(mktemp); \
+	while true; do \
+		if find go/src -name '*.go' -newer $$STAMP -print -quit | grep -q .; then \
+			touch $$STAMP; \
+			$(MAKE) go-build restart-gateway; \
+		fi; \
+		sleep 3; \
+	done
+
+# Tails gateway logs filtered to lines emitted by the custom plugin
+.PHONY: plugin-logs
+plugin-logs:
+	docker compose logs tyk-gateway -f --no-log-prefix 2>&1 | grep --line-buffered -E "GoPlugin|AddFooBarHeader|AuthCheck|InjectMetadata|InjectConfigData|MakeOutboundCall|custom plugin"

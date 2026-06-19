@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-./tyk/scripts/wait-for-it.sh -t 300 localhost:8080
+./tyk/scripts/wait-for-it.sh -t 120 localhost:8080
 sleep 1;
 status=$(curl -s -o /dev/null -w "%{http_code}" localhost:8080/hello)
 

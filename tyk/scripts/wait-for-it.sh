@@ -32,8 +32,9 @@ wait_for()
     WAITFORIT_start_ts=$(date +%s)
     while :
     do
-        if [[ $WAITFORIT_ISBUSY -eq 1 ]]; then
-            nc -z $WAITFORIT_HOST $WAITFORIT_PORT
+        # Prefer nc (portable: Linux, macOS, Windows Git Bash) over /dev/tcp (bash-only, not Git Bash)
+        if command -v nc >/dev/null 2>&1; then
+            nc -z $WAITFORIT_HOST $WAITFORIT_PORT >/dev/null 2>&1
             WAITFORIT_result=$?
         else
             (echo > /dev/tcp/$WAITFORIT_HOST/$WAITFORIT_PORT) >/dev/null 2>&1
@@ -52,10 +53,44 @@ wait_for()
 wait_for_wrapper()
 {
     # In order to support SIGINT during timeout: http://unix.stackexchange.com/a/57692
+    # Detect timeout command: GNU 'timeout', Homebrew 'gtimeout' (macOS), or pure bash fallback
+    local TIMEOUT_CMD=""
+    if command -v timeout >/dev/null 2>&1; then
+        TIMEOUT_CMD="timeout"
+    elif command -v gtimeout >/dev/null 2>&1; then
+        TIMEOUT_CMD="gtimeout"
+    fi
+
+    if [[ -z "$TIMEOUT_CMD" ]]; then
+        # No timeout binary available (macOS without GNU coreutils).
+        # Inline polling loop avoids background process / wait hang issues.
+        local WAITFORIT_start_ts WAITFORIT_now_ts
+        WAITFORIT_start_ts=$(date +%s)
+        echoerr "$WAITFORIT_cmdname: waiting $WAITFORIT_TIMEOUT seconds for $WAITFORIT_HOST:$WAITFORIT_PORT"
+        while :; do
+            if command -v nc >/dev/null 2>&1; then
+                nc -z $WAITFORIT_HOST $WAITFORIT_PORT >/dev/null 2>&1
+            else
+                (echo > /dev/tcp/$WAITFORIT_HOST/$WAITFORIT_PORT) >/dev/null 2>&1
+            fi
+            if [[ $? -eq 0 ]]; then
+                WAITFORIT_now_ts=$(date +%s)
+                echoerr "$WAITFORIT_cmdname: $WAITFORIT_HOST:$WAITFORIT_PORT is available after $((WAITFORIT_now_ts - WAITFORIT_start_ts)) seconds"
+                return 0
+            fi
+            WAITFORIT_now_ts=$(date +%s)
+            if [[ $((WAITFORIT_now_ts - WAITFORIT_start_ts)) -ge $WAITFORIT_TIMEOUT ]]; then
+                echoerr "$WAITFORIT_cmdname: timeout occurred after waiting $WAITFORIT_TIMEOUT seconds for $WAITFORIT_HOST:$WAITFORIT_PORT"
+                return 1
+            fi
+            sleep 1
+        done
+    fi
+
     if [[ $WAITFORIT_QUIET -eq 1 ]]; then
-        timeout $WAITFORIT_BUSYTIMEFLAG $WAITFORIT_TIMEOUT $0 --quiet --child --host=$WAITFORIT_HOST --port=$WAITFORIT_PORT --timeout=$WAITFORIT_TIMEOUT &
+        $TIMEOUT_CMD $WAITFORIT_BUSYTIMEFLAG $WAITFORIT_TIMEOUT $0 --quiet --child --host=$WAITFORIT_HOST --port=$WAITFORIT_PORT --timeout=$WAITFORIT_TIMEOUT &
     else
-        timeout $WAITFORIT_BUSYTIMEFLAG $WAITFORIT_TIMEOUT $0 --child --host=$WAITFORIT_HOST --port=$WAITFORIT_PORT --timeout=$WAITFORIT_TIMEOUT &
+        $TIMEOUT_CMD $WAITFORIT_BUSYTIMEFLAG $WAITFORIT_TIMEOUT $0 --child --host=$WAITFORIT_HOST --port=$WAITFORIT_PORT --timeout=$WAITFORIT_TIMEOUT &
     fi
     WAITFORIT_PID=$!
     trap "kill -INT -$WAITFORIT_PID" INT
@@ -141,16 +176,15 @@ WAITFORIT_STRICT=${WAITFORIT_STRICT:-0}
 WAITFORIT_CHILD=${WAITFORIT_CHILD:-0}
 WAITFORIT_QUIET=${WAITFORIT_QUIET:-0}
 
-# check to see if timeout is from busybox?
-WAITFORIT_TIMEOUT_PATH=$(type -p timeout)
-WAITFORIT_TIMEOUT_PATH=$(realpath $WAITFORIT_TIMEOUT_PATH 2>/dev/null || readlink -f $WAITFORIT_TIMEOUT_PATH)
-if [[ $WAITFORIT_TIMEOUT_PATH =~ "busybox" ]]; then
+# Detect busybox timeout (uses -t flag instead of positional arg).
+# Avoids realpath/readlink -f which are not portable across macOS and Windows.
+WAITFORIT_ISBUSY=0
+WAITFORIT_BUSYTIMEFLAG=""
+if command -v timeout >/dev/null 2>&1; then
+    if timeout --version 2>&1 | grep -qi busybox; then
         WAITFORIT_ISBUSY=1
         WAITFORIT_BUSYTIMEFLAG="-t"
-
-else
-        WAITFORIT_ISBUSY=0
-        WAITFORIT_BUSYTIMEFLAG=""
+    fi
 fi
 
 if [[ $WAITFORIT_CHILD -gt 0 ]]; then
