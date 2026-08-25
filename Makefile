@@ -26,6 +26,7 @@ ifeq ($(origin GOARCH), undefined)
     GOARCH := $(HOST_ARCH)
   endif
 endif
+export GOARCH
 
 # Default task: sets up development environment
 install: up build

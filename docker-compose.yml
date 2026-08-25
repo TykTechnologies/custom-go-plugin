@@ -7,7 +7,7 @@ services:
 
   tyk-gateway:
     image: ${TYK_GATEWAY_IMAGE:-tykio/tyk-gateway:${TYK_VERSION}}
-    platform: linux/amd64
+    platform: linux/${GOARCH:-amd64}
     ports:
       - "8080:8080"
     volumes:
